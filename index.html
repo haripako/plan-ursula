@@ -1,7 +1,15 @@
 <!DOCTYPE html>
 <!-- ═══════════════════════════════════════════════════════
-  EL PLAN DE ÚRSULA — v4.3 (5 julio 2026)
+  EL PLAN DE ÚRSULA — v5.0 (5 julio 2026)
   Historial:
+   v5.0  Menús reescritos para ceñirse ESTRICTAMENTE al documento del
+         Dr. Fernández Corbelle: fuera gazpacho, lentejas/garbanzos, queso,
+         frutos secos, hummus, aguacate y chía (no estaban en el papel).
+         Desayuno reducido a yogur+tostada (lo único que dice el documento).
+         Test de regresión que impide que vuelva a colarse algo no nombrado
+   v4.4  Botón para enviar lo pendiente de comprar directo a Google Keep
+         (Google Tasks no admite recibir texto compartido, así que se usó
+         Keep, que sí lo admite)
    v4.3  Menús ampliados con comida real de la dieta del Dr. Fernández Corbelle
          (verduras, jamones, conservas, marisco) manteniendo las prohibiciones
          ya fijadas (sin zumos ni refrescos, ni light/zero) · test de
@@ -41,7 +49,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Plan Úrsula">
-<title>El Plan de Úrsula 💙 v4.3</title>
+<title>El Plan de Úrsula 💙 v5.0</title>
 <style>
 :root{
   --teal:#0E7C7B; --teal-dark:#0A5958; --aqua:#DDF1F0; --aqua-mid:#BCE3E1;
@@ -337,8 +345,9 @@ details p{margin-top:8px}
   </div>
   <div class="card">
     <h2>Reglas rápidas</h2>
-    <p class="small">✅ Proteína visible en comida y cena · ✅ Fruta entera y masticada · ✅ Agua o infusión<br>
-    ❌ Zumos (ni naturales) · ❌ Refrescos (ni zero) · ❌ Hidrato solo · ❌ Pasta y arroz blanco</p>
+    <p class="small">✅ Verdura o caldo + proteína magra en comida y cena · ✅ Fruta entera masticada · ✅ Aceite de oliva libre, vinagre y sal · ✅ Agua 2-3L/día o infusión · ✅ Sacarina si hace falta endulzar<br>
+    ❌ Zumos y refrescos (de momento, a confirmar) · ❌ Queso, frutos secos, hummus, aguacate · ❌ Legumbres, pasta, arroz, patata, harina, pan rebozado · ❌ Postres · ❌ Salsas</p>
+    <p class="small" style="margin-top:6px">Solo se puede tomar alguna tostada integral en comida/cena de vez en cuando; lo habitual es comer y cenar sin pan.</p>
   </div>
   <div class="card">
     <h2>📷 Diario de comidas</h2>
@@ -353,6 +362,8 @@ details p{margin-top:8px}
     <p class="small">Marca lo que ya tienes o ya compraste.</p>
     <div id="shopList"></div>
     <button class="big-btn ghost" onclick="resetShop()">Reiniciar lista (nueva semana)</button>
+    <button class="big-btn ghost" style="margin-top:8px" onclick="sendShopToKeep()">📤 Enviar lo que falta a Google Keep</button>
+    <p class="small" style="margin-top:6px">Solo funciona en el móvil con Android (Chrome) y si tienes Google Keep instalado. Si no se abre, te lleva a instalarla.</p>
   </div>
 </section>
 
@@ -401,8 +412,8 @@ details p{margin-top:8px}
       <p class="small">Al exprimir la fruta se pierde la fibra, y sin fibra el azúcar de la fruta pasa a la sangre mucho más rápido, como si fuera un refresco. Masticar la fruta entera hace que ese mismo azúcar entre poco a poco, sin picos.</p>
     </details>
     <details>
-      <summary>¿Por qué pan y arroz integral sí, blanco no?</summary>
-      <p class="small">La versión integral conserva la fibra del grano, que hace que el azúcar suba más despacio y sacie más. La versión blanca se digiere casi tan rápido como el azúcar puro.</p>
+      <summary>¿Por qué el pan integral sí y el blanco no?</summary>
+      <p class="small">La versión integral conserva la fibra del grano, que hace que el azúcar suba más despacio y sacie más. La versión blanca se digiere casi tan rápido como el azúcar puro. En su dieta actual, además, el pan se reserva para el desayuno y solo de vez en cuando en comida o cena.</p>
     </details>
     <details>
       <summary>¿Por qué ni siquiera los refrescos "zero"?</summary>
@@ -715,53 +726,55 @@ const WEEK_PLAN = ["rest","gym","pool","home","pool","gym","walk"];
 const DAY_NAMES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 const DAY_SHORT = ["D","L","M","X","J","V","S"];
 
+// Todo lo que hay aquí abajo sale literalmente del documento del Dr. Fernández
+// Corbelle (Desayunos / Media mañana-Meriendas / Comidas y Cenas: Primeros y
+// Segundos). Nada de queso, frutos secos, hummus, aguacate, legumbres, chía
+// ni platos no nombrados (p.ej. gazpacho o cremas): si no está en el papel,
+// no está en la app. Zumos y refrescos siguen excluidos aunque el documento
+// los permita, a la espera de que confirmes que sustituye a esa norma previa.
 const MENUS = {
-  "Desayuno":["Tostada integral + aceite + pavo","Tostada integral + aceite + atún","Tostada integral + queso fresco + tomate","Tostada + jamón dulce + queso fresco","Tostada + ⅓ aguacate + huevo duro","Yogur natural + nueces","Yogur natural + 1 cda. chía","Yogur natural + almendras + canela","Tortilla 2 huevos + tomate","Queso fresco + fruta troceada + nueces","Yogur natural sin lactosa","Tostada integral con aceite de oliva"],
-  "Media mañana":["Manzana","Pera","Naranja entera","1-2 kiwis","2 mandarinas","Tazón pequeño de fresas","10-12 almendras","6-8 nueces","Yogur natural","2 lonchas de pavo","Piña natural"],
-  "Comida · entrante":["Ensalada verde","Ensalada de tomate","Gazpacho (sin pan)","Caldo de verduras","Crema de calabacín","Crema de calabaza","Sopa de verduras","Ensalada pepino y tomate","Escarola y endibias con vinagreta","Espárragos con jamón","Puerros a la plancha","Pimientos verdes a la plancha"],
-  "Comida · proteína":["Merluza plancha/horno","Dorada o lubina al horno","Salmón al horno","Bacalao","Pechuga de pollo","Pechuga de pavo","Ternera magra plancha","Lomo de cerdo magro","Gambas o sepia plancha","2 huevos (tortilla/revuelto)","Lentejas o garbanzos (½ plato)","Conservas de pescado en aceite/escabeche","Marisco variado (gambas, mejillones)"],
-  "Comida · guarnición":["Verduras salteadas","Brócoli al vapor","Judías verdes","Pimientos asados","Zanahoria y calabacín","Berenjena plancha","Espárragos","Champiñones","Coliflor al vapor","Menestra","Ensalada","Coles de Bruselas","Alcachofas al vapor"],
-  "Merienda":["Yogur natural","Queso fresco con tomate","2 lonchas jamón serrano","Lata pequeña atún/sardinas","Puñadito frutos secos","1 huevo duro","Zanahoria/pepino + hummus","Yogur + canela","Lonchas de lomo embutido","York extra"],
-  "Cena · verdura":["Crema de calabacín","Crema de verduras","Sopa de verduras","Caldo","Verduras a la plancha","Espárragos","Ensalada templada","Pisto (sin pan)","Escarola con vinagreta","Champiñones al ajillo"],
-  "Cena · proteína":["Tortilla francesa 2 huevos","Revuelto con champiñones/espinacas","Pescado blanco plancha","Salmón","Pavo o pollo plancha","Gambas o sepia","Tortilla de calabacín","Queso fresco + jamón dulce","Conservas de pescado en escabeche","Marisco variado"]
+  "Desayuno":["Yogur descremado sin lactosa + tostada integral con aceite","Yogur descremado sin lactosa + 2 tostadas integrales con aceite","Yogur descremado sin lactosa + tostada integral (sin aceite)"],
+  "Media mañana":["Manzana","Pera","Naranja entera","2 mandarinas","Tazón pequeño de fresas","1-2 kiwis","Piña natural","Melón (rodaja)","Sandía (rodaja)"],
+  "Comida · entrante":["Ensalada verde (lechuga)","Ensalada de tomate","Escarola y endibias","Espárragos","Pepino","Caldo natural desgrasado (sin patata ni legumbre)","Sopa de picadillo (caldo + verdura + proteína permitida)"],
+  "Comida · proteína":["Carne magra a la plancha (sin grasa)","Jamón serrano (sin tocino)","Lacón","Lomo embutido","York extra","Pechuga de pavo cocida","Pescado blanco a la plancha","Pescado azul a la plancha","Conservas de pescado (aceite o escabeche)","Marisco","Huevo cocido","Tortilla (huevos)","Huevos revueltos","Huevo a la plancha"],
+  "Comida · guarnición":["Calabacín rehogado","Champiñones o setas","Acelgas","Coliflor","Repollo o lombarda","Coles de Bruselas","Berenjena","Brócoli","Pimiento verde","Judía verde (redonda)","Puerros"],
+  "Merienda":["Jamón serrano (sin tocino)","Lacón","Lomo embutido","York extra","Pechuga de pavo cocida","Conservas de pescado en aceite","Conservas de pescado en escabeche"],
+  "Cena · verdura":["Ensalada verde (lechuga)","Espinacas","Grelos","Berro","Cardo","Rábano","Romanescu","Rúcula","Borraja","Canónigos","Caldo natural desgrasado (sin patata ni legumbre)"],
+  "Cena · proteína":["Carne magra a la plancha (sin grasa)","Jamón serrano (sin tocino)","Lacón","Lomo embutido","York extra","Pechuga de pavo cocida","Pescado blanco a la plancha","Pescado azul a la plancha","Conservas de pescado (aceite o escabeche)","Marisco","Huevo cocido","Tortilla (huevos)","Huevos revueltos","Huevo a la plancha"]
 };
 
 // Etiquetas de "apetece" solo para las franjas de proteína (comida y cena), que es
 // donde de verdad tiene sentido preguntar qué le apetece esa semana a Úrsula.
 const PROTEIN_TAGS = {
   "Comida · proteína": {
-    "Merluza plancha/horno":["pescado"], "Dorada o lubina al horno":["pescado"], "Salmón al horno":["pescado"], "Bacalao":["pescado"],
-    "Pechuga de pollo":["pollo"], "Pechuga de pavo":["pollo"],
-    "Ternera magra plancha":["carne"], "Lomo de cerdo magro":["carne"],
-    "Gambas o sepia plancha":["marisco"], "Marisco variado (gambas, mejillones)":["marisco"],
-    "2 huevos (tortilla/revuelto)":["huevo"],
-    "Lentejas o garbanzos (½ plato)":["legumbre"],
-    "Conservas de pescado en aceite/escabeche":["pescado"]
+    "Carne magra a la plancha (sin grasa)":["carne"],
+    "Jamón serrano (sin tocino)":["jamon"], "Lacón":["jamon"], "Lomo embutido":["jamon"], "York extra":["jamon"], "Pechuga de pavo cocida":["jamon"],
+    "Pescado blanco a la plancha":["pescado"], "Pescado azul a la plancha":["pescado"], "Conservas de pescado (aceite o escabeche)":["pescado"],
+    "Marisco":["marisco"],
+    "Huevo cocido":["huevo"], "Tortilla (huevos)":["huevo"], "Huevos revueltos":["huevo"], "Huevo a la plancha":["huevo"]
   },
   "Cena · proteína": {
-    "Tortilla francesa 2 huevos":["huevo"], "Revuelto con champiñones/espinacas":["huevo"],
-    "Pescado blanco plancha":["pescado"], "Salmón":["pescado"],
-    "Pavo o pollo plancha":["pollo"],
-    "Gambas o sepia":["marisco"], "Marisco variado":["marisco"],
-    "Tortilla de calabacín":["huevo"],
-    "Conservas de pescado en escabeche":["pescado"],
-    "Queso fresco + jamón dulce":["otros"]
+    "Carne magra a la plancha (sin grasa)":["carne"],
+    "Jamón serrano (sin tocino)":["jamon"], "Lacón":["jamon"], "Lomo embutido":["jamon"], "York extra":["jamon"], "Pechuga de pavo cocida":["jamon"],
+    "Pescado blanco a la plancha":["pescado"], "Pescado azul a la plancha":["pescado"], "Conservas de pescado (aceite o escabeche)":["pescado"],
+    "Marisco":["marisco"],
+    "Huevo cocido":["huevo"], "Tortilla (huevos)":["huevo"], "Huevos revueltos":["huevo"], "Huevo a la plancha":["huevo"]
   }
 };
-const PREF_TAGS=[["pescado","🐟 Pescado"],["pollo","🍗 Pollo/pavo"],["carne","🥩 Carne"],["marisco","🦐 Marisco"],["huevo","🥚 Huevo"],["legumbre","🫘 Legumbre"]];
+const PREF_TAGS=[["pescado","🐟 Pescado"],["carne","🥩 Carne"],["jamon","🍖 Jamón/embutido magro"],["marisco","🦐 Marisco"],["huevo","🥚 Huevo"]];
 
 // Kcal ORIENTATIVAS por plato (estimación general, no una medición real de cada
 // ración). Sirven para hacerse una idea, nunca como límite estricto: el rango
 // real de Úrsula (1.350-1.430 kcal/día) lo fijó su endocrino, no esta tabla.
 const KCAL = {
-  "Desayuno":{"Tostada integral + aceite + pavo":220,"Tostada integral + aceite + atún":230,"Tostada integral + queso fresco + tomate":200,"Tostada + jamón dulce + queso fresco":210,"Tostada + ⅓ aguacate + huevo duro":260,"Yogur natural + nueces":180,"Yogur natural + 1 cda. chía":140,"Yogur natural + almendras + canela":190,"Tortilla 2 huevos + tomate":200,"Queso fresco + fruta troceada + nueces":220,"Yogur natural sin lactosa":80,"Tostada integral con aceite de oliva":150},
-  "Media mañana":{"Manzana":80,"Pera":85,"Naranja entera":70,"1-2 kiwis":90,"2 mandarinas":70,"Tazón pequeño de fresas":50,"10-12 almendras":90,"6-8 nueces":120,"Yogur natural":90,"2 lonchas de pavo":50,"Piña natural":60},
-  "Comida · entrante":{"Ensalada verde":40,"Ensalada de tomate":50,"Gazpacho (sin pan)":70,"Caldo de verduras":30,"Crema de calabacín":90,"Crema de calabaza":100,"Sopa de verduras":60,"Ensalada pepino y tomate":45,"Escarola y endibias con vinagreta":60,"Espárragos con jamón":90,"Puerros a la plancha":50,"Pimientos verdes a la plancha":45},
-  "Comida · proteína":{"Merluza plancha/horno":140,"Dorada o lubina al horno":160,"Salmón al horno":250,"Bacalao":120,"Pechuga de pollo":165,"Pechuga de pavo":150,"Ternera magra plancha":190,"Lomo de cerdo magro":180,"Gambas o sepia plancha":110,"2 huevos (tortilla/revuelto)":180,"Lentejas o garbanzos (½ plato)":200,"Conservas de pescado en aceite/escabeche":180,"Marisco variado (gambas, mejillones)":130},
-  "Comida · guarnición":{"Verduras salteadas":80,"Brócoli al vapor":40,"Judías verdes":45,"Pimientos asados":50,"Zanahoria y calabacín":50,"Berenjena plancha":60,"Espárragos":30,"Champiñones":35,"Coliflor al vapor":35,"Menestra":90,"Ensalada":40,"Coles de Bruselas":50,"Alcachofas al vapor":60},
-  "Merienda":{"Yogur natural":90,"Queso fresco con tomate":120,"2 lonchas jamón serrano":60,"Lata pequeña atún/sardinas":120,"Puñadito frutos secos":150,"1 huevo duro":80,"Zanahoria/pepino + hummus":100,"Yogur + canela":90,"Lonchas de lomo embutido":90,"York extra":70},
-  "Cena · verdura":{"Crema de calabacín":90,"Crema de verduras":90,"Sopa de verduras":60,"Caldo":30,"Verduras a la plancha":70,"Espárragos":30,"Ensalada templada":60,"Pisto (sin pan)":100,"Escarola con vinagreta":55,"Champiñones al ajillo":70},
-  "Cena · proteína":{"Tortilla francesa 2 huevos":180,"Revuelto con champiñones/espinacas":190,"Pescado blanco plancha":140,"Salmón":250,"Pavo o pollo plancha":160,"Gambas o sepia":110,"Tortilla de calabacín":170,"Queso fresco + jamón dulce":180,"Conservas de pescado en escabeche":170,"Marisco variado":120}
+  "Desayuno":{"Yogur descremado sin lactosa + tostada integral con aceite":180,"Yogur descremado sin lactosa + 2 tostadas integrales con aceite":260,"Yogur descremado sin lactosa + tostada integral (sin aceite)":140},
+  "Media mañana":{"Manzana":80,"Pera":85,"Naranja entera":70,"2 mandarinas":70,"Tazón pequeño de fresas":50,"1-2 kiwis":90,"Piña natural":60,"Melón (rodaja)":50,"Sandía (rodaja)":45},
+  "Comida · entrante":{"Ensalada verde (lechuga)":30,"Ensalada de tomate":50,"Escarola y endibias":35,"Espárragos":30,"Pepino":15,"Caldo natural desgrasado (sin patata ni legumbre)":40,"Sopa de picadillo (caldo + verdura + proteína permitida)":120},
+  "Comida · proteína":{"Carne magra a la plancha (sin grasa)":190,"Jamón serrano (sin tocino)":110,"Lacón":100,"Lomo embutido":140,"York extra":70,"Pechuga de pavo cocida":100,"Pescado blanco a la plancha":140,"Pescado azul a la plancha":220,"Conservas de pescado (aceite o escabeche)":180,"Marisco":130,"Huevo cocido":80,"Tortilla (huevos)":180,"Huevos revueltos":180,"Huevo a la plancha":90},
+  "Comida · guarnición":{"Calabacín rehogado":60,"Champiñones o setas":35,"Acelgas":40,"Coliflor":35,"Repollo o lombarda":40,"Coles de Bruselas":50,"Berenjena":60,"Brócoli":40,"Pimiento verde":35,"Judía verde (redonda)":45,"Puerros":50},
+  "Merienda":{"Jamón serrano (sin tocino)":80,"Lacón":70,"Lomo embutido":100,"York extra":60,"Pechuga de pavo cocida":70,"Conservas de pescado en aceite":150,"Conservas de pescado en escabeche":120},
+  "Cena · verdura":{"Ensalada verde (lechuga)":30,"Espinacas":35,"Grelos":40,"Berro":15,"Cardo":40,"Rábano":15,"Romanescu":35,"Rúcula":15,"Borraja":30,"Canónigos":15,"Caldo natural desgrasado (sin patata ni legumbre)":40},
+  "Cena · proteína":{"Carne magra a la plancha (sin grasa)":190,"Jamón serrano (sin tocino)":110,"Lacón":100,"Lomo embutido":140,"York extra":70,"Pechuga de pavo cocida":100,"Pescado blanco a la plancha":140,"Pescado azul a la plancha":220,"Conservas de pescado (aceite o escabeche)":180,"Marisco":130,"Huevo cocido":80,"Tortilla (huevos)":180,"Huevos revueltos":180,"Huevo a la plancha":90}
 };
 function kcalFor(slot,name){return (KCAL[slot]&&KCAL[slot][name])||0}
 function dayTotalKcal(menu){
@@ -770,10 +783,10 @@ function dayTotalKcal(menu){
 }
 
 const SHOP = {
-  "Proteínas":["Pechugas de pollo (3-4)","Pavo fresco o fiambre +80%","Pescado blanco (3-4 raciones)","Salmón (1-2)","Atún al natural (4-6 latas)","Sardinas/caballa (2-3 latas)","Huevos (docena)","Ternera magra o lomo (1-2)","Gambas o sepia","Marisco variado (gambas, mejillones)","Jamón dulce/serrano","Lacón o york extra","Queso fresco","Yogur natural entero sin azúcar (6-8)","Yogur sin lactosa (opc.)","Legumbre cocida (1-2 botes)","Conservas de pescado en escabeche"],
-  "Verduras":["Ensalada (2 bolsas)","Tomates (6-8)","Pepino (2)","Calabacín (3-4)","Brócoli (1-2)","Judías verdes (500g)","Pimientos (3-4)","Zanahorias","Champiñones","Espinacas","Espárragos","Cebolla y ajo","Verduras para caldo","Escarola y endibias","Puerros","Coles de Bruselas","Alcachofas"],
-  "Frutas":["Manzanas (3-4)","Peras (2-3)","Naranjas/mandarinas (4-5)","Kiwis (3-4)","Fresas (opcional)","Piña natural (opcional)"],
-  "Despensa":["Pan 100% integral","Aceite de oliva virgen extra","Arroz integral","Nueces y almendras al natural","Semillas de chía (opc.)","Hummus (opc.)","Aguacates (2, opc.)","Especias (canela, pimentón…)","Infusiones"]
+  "Proteínas":["Ternera magra o lomo de cerdo (sin grasa)","Pechuga de pavo cocida","Jamón serrano (sin tocino)","Lacón","Lomo embutido","York extra","Pescado blanco (3-4 raciones)","Pescado azul (2-3 raciones)","Conservas de pescado (aceite/escabeche)","Marisco","Huevos (docena)","Yogur descremado natural sin lactosa (6-8)"],
+  "Verduras":["Lechuga/ensalada","Tomates","Pepino","Escarola y endibias","Espárragos","Espinacas","Acelgas","Calabacín","Champiñones/setas","Coliflor","Repollo o lombarda","Coles de Bruselas","Berenjena","Brócoli","Pimientos verdes","Judías verdes","Puerros","Verduras para caldo"],
+  "Frutas":["Manzanas","Peras","Naranjas/mandarinas","Kiwis","Piña natural","Fresas","Melón","Sandía"],
+  "Despensa":["Pan 100% integral","Aceite de oliva virgen extra","Vinagre de vino","Sal","Sacarina (comprimidos o líquida)","Café","Infusiones","Leche descremada o bebida de soja (enriquecidas en calcio)"]
 };
 
 const BADGES = [
@@ -1197,6 +1210,35 @@ function renderShop(){
 }
 function resetShop(){S.shop={};save();renderShop();toast("Lista nueva. ¡A por la semana! 🛒")}
 
+/* ═══════════════ ENVIAR LA COMPRA A GOOGLE KEEP ═══════════════ */
+// Google Tasks no acepta texto compartido desde otras apps (no hay integración
+// posible sin que Úrsula inicie sesión con Google). Google Keep sí lo acepta,
+// así que abrimos Keep directamente (sin pasar por el selector de apps) usando
+// un intent de Android. Solo funciona en Chrome para Android.
+function buildShoppingText(){
+  const lines=["🛒 Lista de la compra — Plan de Úrsula",""];
+  let any=false;
+  Object.keys(SHOP).forEach(cat=>{
+    const pending=SHOP[cat].filter(item=>!S.shop[cat+"|"+item]);
+    if(!pending.length)return;
+    any=true;
+    lines.push(cat.toUpperCase());
+    pending.forEach(item=>lines.push("- "+item));
+    lines.push("");
+  });
+  if(!any)lines.push("¡Ya lo tienes todo marcado! 🎉");
+  return lines.join("\n");
+}
+function sendShopToKeep(){
+  const text=buildShoppingText();
+  const fallback=encodeURIComponent("https://play.google.com/store/apps/details?id=com.google.android.keep");
+  const intentUrl=`intent:#Intent;action=android.intent.action.SEND;type=text/plain;`+
+    `package=com.google.android.keep;`+
+    `S.android.intent.extra.TEXT=${encodeURIComponent(text)};`+
+    `S.browser_fallback_url=${fallback};end`;
+  window.location.href=intentUrl;
+}
+
 /* ═══════════════ YO ═══════════════ */
 function checkBadges(silent){
   const st=calcStreaks();
@@ -1356,7 +1398,7 @@ function renderCharts(){
 }
 
 /* ═══════════════ IDEAS / DESEOS ═══════════════ */
-const APP_VERSION="4.3";
+const APP_VERSION="5.0";
 function saveWish(){
   const el=document.getElementById("wishVal");
   const txt=(el.value||"").trim();
@@ -1547,7 +1589,7 @@ const TIPS=[
   "Un HOMA que baja de 13 a 5 es una mejora real y medible: vas por buen camino.",
   "Columna neutra siempre: es lo que más protege tu artrodesis mientras se fortalece alrededor.",
   "Descansar en un brote de fibromialgia no rompe tu progreso, lo protege.",
-  "El pan y el arroz integral sacian más y suben el azúcar más despacio que los blancos.",
+  "El pan integral sacia más y sube el azúcar más despacio que el blanco.",
   "La vitamina D ayuda a fijar el calcio y a que el músculo se recupere mejor."
 ];
 let tInt=null;
