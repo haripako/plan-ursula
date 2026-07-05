@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <!-- ═══════════════════════════════════════════════════════
-  EL PLAN DE ÚRSULA — v5.3 (5 julio 2026)
+  EL PLAN DE ÚRSULA — v5.4 (5 julio 2026)
   Historial:
+   v5.4  Sección Shorts descartada (YouTube requiere API key para embeber
+         su feed; se retomará cuando se decida el enfoque adecuado)
    v5.3  Cantidades reales en el menú: stepper [−][150g][+] por franja,
          kcal calculadas por 100g (o por unidad para huevos/yogur/fruta)
    v5.2  Nueva pestaña "Hambre": registro rápido de nivel (1-5) + causas
@@ -59,7 +61,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Plan Úrsula">
-<title>El Plan de Úrsula 💙 v5.3</title>
+<title>El Plan de Úrsula 💙 v5.4</title>
 <style>
 :root{
   --teal:#0E7C7B; --teal-dark:#0A5958; --aqua:#DDF1F0; --aqua-mid:#BCE3E1;
@@ -1782,6 +1784,7 @@ function renderHungerHist(){
     return `<div style="display:flex;align-items:center;gap:8px"><span style="flex:1">${e.d} · ${e.t} · ${lvl[1]} ${lvl[2]}${tagLabels?" · "+tagLabels:""}</span><button onclick="delHunger(${i})" style="color:var(--coral);font-weight:800;padding:4px 8px">✕</button></div>`;
   }).join("");
 }
+
 function renderHunger(){
   renderHungerLevels();
   renderHungerTagsPicker();
@@ -1828,7 +1831,7 @@ function renderCharts(){
 }
 
 /* ═══════════════ IDEAS / DESEOS ═══════════════ */
-const APP_VERSION="5.3";
+const APP_VERSION="5.4";
 function saveWish(){
   const el=document.getElementById("wishVal");
   const txt=(el.value||"").trim();
