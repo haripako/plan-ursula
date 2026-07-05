@@ -1,7 +1,11 @@
 <!DOCTYPE html>
 <!-- ═══════════════════════════════════════════════════════
-  EL PLAN DE ÚRSULA — v4.0 (5 julio 2026)
+  EL PLAN DE ÚRSULA — v4.2 (5 julio 2026)
   Historial:
+   v4.2  Fix: al rectificar el día (miss-click), también se limpian las
+         respuestas de feedback por tanda de ese día
+   v4.1  Feedback inmediato tras la primera tanda de cada ejercicio (¿bien o
+         duele?), en vez de esperar a terminar toda la sesión
    v4.0  Rediseño grande: nav Hoy·Semana·Comida·Aprende·Yo · generador de menú
          semanal por preferencias · lista de la compra sugerida · registro
          "comido/voy a comer" por franja · kcal orientativas por plato ·
@@ -33,7 +37,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Plan Úrsula">
-<title>El Plan de Úrsula 💙 v4.0</title>
+<title>El Plan de Úrsula 💙 v4.2</title>
 <style>
 :root{
   --teal:#0E7C7B; --teal-dark:#0A5958; --aqua:#DDF1F0; --aqua-mid:#BCE3E1;
@@ -229,6 +233,16 @@ details p{margin-top:8px}
 .meal-slot .eatbtn.on{background:var(--ok);color:#fff}
 .meal-slot select{width:100%;margin-top:6px;padding:11px 12px;font-size:14.5px;border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--ink)}
 .kcal-tag{font-size:11px;color:var(--muted);white-space:nowrap;margin-left:6px}
+
+.feedbackModal{position:fixed;inset:0;background:rgba(12,45,46,.55);display:none;align-items:center;justify-content:center;z-index:120;padding:20px}
+.feedbackModal.show{display:flex}
+.feedbackModal-inner{background:#fff;border-radius:16px;padding:20px;max-width:320px;width:100%;text-align:center;box-shadow:var(--shadow)}
+.feedbackModal-inner p{font-size:15.5px;font-weight:800;color:var(--ink);margin-bottom:14px}
+.feedbackModal-btns{display:flex;gap:10px}
+.feedbackModal-btns button{flex:1;padding:13px 4px;border-radius:12px;font-size:15px;font-weight:800}
+.fb-ok{background:var(--aqua);color:var(--teal-dark)}
+.fb-pain{background:#FBE4E1;color:var(--coral)}
+.feedback-skip{display:block;margin:12px auto 0;color:var(--muted);font-size:12.5px;font-weight:700;text-decoration:underline}
 </style>
 </head>
 <body>
@@ -508,6 +522,17 @@ details p{margin-top:8px}
   <button data-v="aprende"><span class="ico">📚</span>Aprende</button>
   <button data-v="yo"><span class="ico">🏆</span>Yo</button>
 </nav>
+
+<div class="feedbackModal" id="feedbackModal">
+  <div class="feedbackModal-inner">
+    <p id="feedbackText">¿Qué tal esta serie?</p>
+    <div class="feedbackModal-btns">
+      <button type="button" class="fb-ok" onclick="answerStepFeedback('ok')">🙂 Bien</button>
+      <button type="button" class="fb-pain" onclick="answerStepFeedback('pain')">😣 Me ha dolido</button>
+    </div>
+    <button type="button" class="feedback-skip" onclick="closeFeedback()">Preguntarme luego</button>
+  </div>
+</div>
 
 <div class="videoModal" id="videoModal">
   <div class="videoModal-inner">
@@ -874,7 +899,17 @@ function renderToday(){
     });
     const lvlEl=div.querySelector(".lvl-tag");
     if(lvlEl)lvlEl.addEventListener("click",e=>{e.stopPropagation();cycleLevel(st[5])});
-    div.onclick=()=>{stepState[i]=!stepState[i];S.steps[sk]=stepState;save();renderToday()};
+    div.onclick=()=>{
+      const turningOn=!stepState[i];
+      stepState[i]=turningOn;
+      S.steps[sk]=stepState; save();
+      const exId=st[5];
+      if(turningOn&&exId&&!S.checkinAnswered[todayKey()+"|"+exId]){
+        askExerciseFeedback(exId, EXO_NAME[exId]||st[0]);
+        return; // el modal se encarga de volver a pintar tras la respuesta
+      }
+      renderToday();
+    };
     wrap.appendChild(div);
   });
 
@@ -917,6 +952,8 @@ function undoToday(){
   delete S.acts[tk];
   // También borramos los checks de pasos de hoy, para que la nueva elección empiece limpia
   Object.keys(S.steps).forEach(k=>{if(k===tk||k.startsWith(tk+"|"))delete S.steps[k]});
+  Object.keys(S.checkinAnswered).forEach(k=>{if(k.startsWith(tk+"|"))delete S.checkinAnswered[k]});
+  Object.keys(S.checkins).forEach(k=>{if(k.startsWith(tk+"|"))delete S.checkins[k]});
   save();
   toast("Sin problema, Úrsula. Elige de nuevo cuando quieras 💙");
   renderAll();
@@ -1313,7 +1350,7 @@ function renderCharts(){
 }
 
 /* ═══════════════ IDEAS / DESEOS ═══════════════ */
-const APP_VERSION="4.0";
+const APP_VERSION="4.2";
 function saveWish(){
   const el=document.getElementById("wishVal");
   const txt=(el.value||"").trim();
@@ -1529,6 +1566,29 @@ function openVideo(id){
 function closeVideo(){
   document.getElementById("videoModal").classList.remove("show");
   document.getElementById("videoFrame").innerHTML=""; // para que deje de sonar/reproducirse
+}
+
+/* ═══════════════ FEEDBACK INMEDIATO TRAS CADA TANDA ═══════════════ */
+// En vez de esperar a terminar toda la sesión, se pregunta nada más marcar
+// la primera tanda de un ejercicio: así, si duele, la SIGUIENTE tanda que se
+// proponga ya sale en el nivel más suave (reutiliza answerCheckin).
+let pendingFeedback=null;
+function askExerciseFeedback(id,name){
+  pendingFeedback={id,name};
+  document.getElementById("feedbackText").textContent=`¿Qué tal esta serie de "${name}"?`;
+  document.getElementById("feedbackModal").classList.add("show");
+}
+function answerStepFeedback(felt){
+  if(!pendingFeedback){closeFeedback();return}
+  const {id,name}=pendingFeedback;
+  pendingFeedback=null;
+  closeFeedback();
+  answerCheckin(id,name,felt);
+}
+function closeFeedback(){
+  pendingFeedback=null;
+  document.getElementById("feedbackModal").classList.remove("show");
+  renderToday();
 }
 function beep(){try{const c=new (window.AudioContext||window.webkitAudioContext)();
   const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);
