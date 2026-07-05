@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <!-- ═══════════════════════════════════════════════════════
-  EL PLAN DE ÚRSULA — v5.2 (5 julio 2026)
+  EL PLAN DE ÚRSULA — v5.3 (5 julio 2026)
   Historial:
+   v5.3  Cantidades reales en el menú: stepper [−][150g][+] por franja,
+         kcal calculadas por 100g (o por unidad para huevos/yogur/fruta)
    v5.2  Nueva pestaña "Hambre": registro rápido de nivel (1-5) + causas
          posibles (chips, sin texto libre), con vista de patrones (causa más
          repetida, franja horaria, nivel medio) — sin objetivos ni juicios,
@@ -57,7 +59,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Plan Úrsula">
-<title>El Plan de Úrsula 💙 v5.2</title>
+<title>El Plan de Úrsula 💙 v5.3</title>
 <style>
 :root{
   --teal:#0E7C7B; --teal-dark:#0A5958; --aqua:#DDF1F0; --aqua-mid:#BCE3E1;
@@ -252,6 +254,11 @@ details p{margin-top:8px}
 .meal-slot .eatbtn{background:var(--aqua);color:var(--teal-dark);border-radius:99px;padding:5px 12px;font-size:12px;font-weight:800;white-space:nowrap}
 .meal-slot .eatbtn.on{background:var(--ok);color:#fff}
 .meal-slot select{width:100%;margin-top:6px;padding:11px 12px;font-size:14.5px;border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--ink)}
+
+.qty-stepper{display:flex;align-items:center;gap:5px;margin-top:5px}
+.qty-btn{background:var(--aqua);color:var(--teal-dark);border-radius:8px;width:28px;height:28px;font-size:17px;font-weight:900;flex-shrink:0;line-height:1}
+.qty-val{width:52px;text-align:center;border:1.5px solid var(--line);border-radius:8px;padding:4px 2px;font-size:14px;font-weight:700;color:var(--ink);font-family:inherit}
+.qty-unit{font-size:12px;font-weight:700;color:var(--muted);flex-shrink:0}
 .kcal-tag{font-size:11px;color:var(--muted);white-space:nowrap;margin-left:6px}
 
 .hunger-levels{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
@@ -817,18 +824,15 @@ const PROTEIN_TAGS = {
 };
 const PREF_TAGS=[["pescado","🐟 Pescado"],["carne","🥩 Carne"],["jamon","🍖 Jamón/embutido magro"],["marisco","🦐 Marisco"],["huevo","🥚 Huevo"]];
 
-// Categorías para lo que Úrsula añada ella misma: como no hay forma de calcular
-// kcal reales de un plato inventado, se usa una media orientativa por tipo de
-// alimento. Si la categoría es de proteína, además sirve para el generador de
-// preferencias semanales (mismo mecanismo que PROTEIN_TAGS).
+// Categorías para alimentos propios: [id, label, kcal/100g_o_ud, unidad, qtyDefault, step, prefTag]
 const CUSTOM_CATS=[
-  ["verdura","🥦 Verdura / caldo",35,null],
-  ["fruta","🍎 Fruta",70,null],
-  ["proteina","🥩 Carne magra",180,"carne"],
-  ["jamon","🍖 Jamón / embutido magro",90,"jamon"],
-  ["pescado","🐟 Pescado / marisco",140,"pescado"],
-  ["huevo","🥚 Huevo",90,"huevo"],
-  ["otro","🍽️ Otro",100,null]
+  ["verdura",  "🥦 Verdura / caldo",    20,  "g",  150, 50,  null],
+  ["fruta",    "🍎 Fruta",              55,  "g",  120, 25,  null],
+  ["proteina", "🥩 Carne magra",        165, "g",  150, 25,  "carne"],
+  ["jamon",    "🍖 Jamón / emb. magro", 180, "g",  50,  25,  "jamon"],
+  ["pescado",  "🐟 Pescado / marisco",  120, "g",  150, 25,  "pescado"],
+  ["huevo",    "🥚 Huevo",              80,  "ud", 1,   1,   "huevo"],
+  ["otro",     "🍽️ Otro",               100, "g",  100, 25,  null]
 ];
 
 // Medidor de hambre: solo para entender patrones, nunca para juzgar ni para
@@ -845,29 +849,156 @@ function hungerHourBucket(hour){
 // Kcal ORIENTATIVAS por plato (estimación general, no una medición real de cada
 // ración). Sirven para hacerse una idea, nunca como límite estricto: el rango
 // real de Úrsula (1.350-1.430 kcal/día) lo fijó su endocrino, no esta tabla.
-const KCAL = {
-  "Desayuno":{"Yogur descremado sin lactosa + tostada integral con aceite":180,"Yogur descremado sin lactosa + 2 tostadas integrales con aceite":260,"Yogur descremado sin lactosa + tostada integral (sin aceite)":140},
-  "Media mañana":{"Manzana":80,"Pera":85,"Naranja entera":70,"2 mandarinas":70,"Tazón pequeño de fresas":50,"1-2 kiwis":90,"Piña natural":60,"Melón (rodaja)":50,"Sandía (rodaja)":45},
-  "Comida · entrante":{"Ensalada verde (lechuga)":30,"Ensalada de tomate":50,"Escarola y endibias":35,"Espárragos":30,"Pepino":15,"Caldo natural desgrasado (sin patata ni legumbre)":40,"Sopa de picadillo (caldo + verdura + proteína permitida)":120},
-  "Comida · proteína":{"Carne magra a la plancha (sin grasa)":190,"Jamón serrano (sin tocino)":110,"Lacón":100,"Lomo embutido":140,"York extra":70,"Pechuga de pavo cocida":100,"Pescado blanco a la plancha":140,"Pescado azul a la plancha":220,"Conservas de pescado (aceite o escabeche)":180,"Marisco":130,"Huevo cocido":80,"Tortilla (huevos)":180,"Huevos revueltos":180,"Huevo a la plancha":90},
-  "Comida · guarnición":{"Calabacín rehogado":60,"Champiñones o setas":35,"Acelgas":40,"Coliflor":35,"Repollo o lombarda":40,"Coles de Bruselas":50,"Berenjena":60,"Brócoli":40,"Pimiento verde":35,"Judía verde (redonda)":45,"Puerros":50},
-  "Merienda":{"Jamón serrano (sin tocino)":80,"Lacón":70,"Lomo embutido":100,"York extra":60,"Pechuga de pavo cocida":70,"Conservas de pescado en aceite":150,"Conservas de pescado en escabeche":120},
-  "Cena · verdura":{"Ensalada verde (lechuga)":30,"Espinacas":35,"Grelos":40,"Berro":15,"Cardo":40,"Rábano":15,"Romanescu":35,"Rúcula":15,"Borraja":30,"Canónigos":15,"Caldo natural desgrasado (sin patata ni legumbre)":40},
-  "Cena · proteína":{"Carne magra a la plancha (sin grasa)":190,"Jamón serrano (sin tocino)":110,"Lacón":100,"Lomo embutido":140,"York extra":70,"Pechuga de pavo cocida":100,"Pescado blanco a la plancha":140,"Pescado azul a la plancha":220,"Conservas de pescado (aceite o escabeche)":180,"Marisco":130,"Huevo cocido":80,"Tortilla (huevos)":180,"Huevos revueltos":180,"Huevo a la plancha":90}
+// KCAL_DATA: cada alimento tiene {k, u, d, s}
+//   k = kcal por 100g (u="g") o kcal por unidad (u="ud")
+//   u = "g" (gramos/ml) | "ud" (unidad contable)
+//   d = cantidad por defecto
+//   s = paso del stepper
+// kcal real = k * qty / 100  (u="g")  |  k * qty  (u="ud")
+// Los valores de "ud" ya llevan todo el kcal de esa unidad (1 huevo = 80 kcal).
+const KCAL_DATA = {
+  "Desayuno":{
+    "Yogur descremado sin lactosa + tostada integral con aceite":     {k:180,u:"ud",d:1,s:1},
+    "Yogur descremado sin lactosa + 2 tostadas integrales con aceite":{k:260,u:"ud",d:1,s:1},
+    "Yogur descremado sin lactosa + tostada integral (sin aceite)":   {k:140,u:"ud",d:1,s:1}
+  },
+  "Media mañana":{
+    "Manzana":                  {k:52, u:"g",  d:120,s:20},
+    "Pera":                     {k:57, u:"g",  d:150,s:25},
+    "Naranja entera":           {k:47, u:"g",  d:150,s:25},
+    "2 mandarinas":             {k:53, u:"g",  d:130,s:25},
+    "Tazón pequeño de fresas":  {k:32, u:"g",  d:150,s:50},
+    "1-2 kiwis":                {k:61, u:"g",  d:130,s:65},
+    "Piña natural":             {k:50, u:"g",  d:150,s:50},
+    "Melón (rodaja)":           {k:28, u:"g",  d:200,s:50},
+    "Sandía (rodaja)":          {k:30, u:"g",  d:200,s:50}
+  },
+  "Comida · entrante":{
+    "Ensalada verde (lechuga)":                               {k:15, u:"g",  d:150,s:50},
+    "Ensalada de tomate":                                     {k:25, u:"g",  d:150,s:50},
+    "Escarola y endibias":                                    {k:20, u:"g",  d:150,s:50},
+    "Espárragos":                                             {k:20, u:"g",  d:150,s:50},
+    "Pepino":                                                 {k:12, u:"g",  d:200,s:50},
+    "Caldo natural desgrasado (sin patata ni legumbre)":      {k:12, u:"g",  d:300,s:100},
+    "Sopa de picadillo (caldo + verdura + proteína permitida)":{k:35, u:"g",  d:300,s:100}
+  },
+  "Comida · proteína":{
+    "Carne magra a la plancha (sin grasa)":        {k:165,u:"g",  d:150,s:25},
+    "Jamón serrano (sin tocino)":                  {k:215,u:"g",  d:50, s:25},
+    "Lacón":                                       {k:190,u:"g",  d:50, s:25},
+    "Lomo embutido":                               {k:280,u:"g",  d:50, s:25},
+    "York extra":                                  {k:120,u:"g",  d:60, s:25},
+    "Pechuga de pavo cocida":                      {k:110,u:"g",  d:80, s:25},
+    "Pescado blanco a la plancha":                 {k:95, u:"g",  d:150,s:25},
+    "Pescado azul a la plancha":                   {k:150,u:"g",  d:150,s:25},
+    "Conservas de pescado (aceite o escabeche)":   {k:200,u:"g",  d:80, s:20},
+    "Marisco":                                     {k:90, u:"g",  d:150,s:25},
+    "Huevo cocido":                                {k:80, u:"ud", d:1,  s:1},
+    "Tortilla (huevos)":                           {k:80, u:"ud", d:2,  s:1},
+    "Huevos revueltos":                            {k:80, u:"ud", d:2,  s:1},
+    "Huevo a la plancha":                          {k:80, u:"ud", d:2,  s:1}
+  },
+  "Comida · guarnición":{
+    "Calabacín rehogado":   {k:25, u:"g",d:150,s:50},
+    "Champiñones o setas":  {k:22, u:"g",d:100,s:50},
+    "Acelgas":              {k:20, u:"g",d:150,s:50},
+    "Coliflor":             {k:25, u:"g",d:150,s:50},
+    "Repollo o lombarda":   {k:25, u:"g",d:150,s:50},
+    "Coles de Bruselas":    {k:43, u:"g",d:150,s:50},
+    "Berenjena":            {k:25, u:"g",d:150,s:50},
+    "Brócoli":              {k:28, u:"g",d:150,s:50},
+    "Pimiento verde":       {k:20, u:"g",d:100,s:50},
+    "Judía verde (redonda)":{k:31, u:"g",d:150,s:50},
+    "Puerros":              {k:31, u:"g",d:100,s:50}
+  },
+  "Merienda":{
+    "Jamón serrano (sin tocino)":          {k:215,u:"g",d:50,s:25},
+    "Lacón":                               {k:190,u:"g",d:50,s:25},
+    "Lomo embutido":                       {k:280,u:"g",d:50,s:25},
+    "York extra":                          {k:120,u:"g",d:60,s:25},
+    "Pechuga de pavo cocida":              {k:110,u:"g",d:80,s:25},
+    "Conservas de pescado en aceite":      {k:230,u:"g",d:80,s:20},
+    "Conservas de pescado en escabeche":   {k:140,u:"g",d:80,s:20}
+  },
+  "Cena · verdura":{
+    "Ensalada verde (lechuga)":                          {k:15, u:"g",d:150,s:50},
+    "Espinacas":                                         {k:23, u:"g",d:150,s:50},
+    "Grelos":                                            {k:28, u:"g",d:150,s:50},
+    "Berro":                                             {k:25, u:"g",d:100,s:50},
+    "Cardo":                                             {k:20, u:"g",d:150,s:50},
+    "Rábano":                                            {k:16, u:"g",d:100,s:50},
+    "Romanescu":                                         {k:26, u:"g",d:150,s:50},
+    "Rúcula":                                            {k:25, u:"g",d:100,s:50},
+    "Borraja":                                           {k:20, u:"g",d:150,s:50},
+    "Canónigos":                                         {k:25, u:"g",d:100,s:50},
+    "Caldo natural desgrasado (sin patata ni legumbre)": {k:12, u:"g",d:300,s:100}
+  },
+  "Cena · proteína":{
+    "Carne magra a la plancha (sin grasa)":      {k:165,u:"g",  d:150,s:25},
+    "Jamón serrano (sin tocino)":                {k:215,u:"g",  d:50, s:25},
+    "Lacón":                                     {k:190,u:"g",  d:50, s:25},
+    "Lomo embutido":                             {k:280,u:"g",  d:50, s:25},
+    "York extra":                                {k:120,u:"g",  d:60, s:25},
+    "Pechuga de pavo cocida":                    {k:110,u:"g",  d:80, s:25},
+    "Pescado blanco a la plancha":               {k:95, u:"g",  d:150,s:25},
+    "Pescado azul a la plancha":                 {k:150,u:"g",  d:150,s:25},
+    "Conservas de pescado (aceite o escabeche)": {k:200,u:"g",  d:80, s:20},
+    "Marisco":                                   {k:90, u:"g",  d:150,s:25},
+    "Huevo cocido":                              {k:80, u:"ud", d:1,  s:1},
+    "Tortilla (huevos)":                         {k:80, u:"ud", d:2,  s:1},
+    "Huevos revueltos":                          {k:80, u:"ud", d:2,  s:1},
+    "Huevo a la plancha":                        {k:80, u:"ud", d:2,  s:1}
+  }
 };
+function kdataFor(slot,name){
+  return KCAL_DATA[slot]?.[name]||null;
+}
 function customFoodInfo(slot,name){
   return (S.customFoods[slot]||[]).find(c=>c.name===name);
 }
-function kcalFor(slot,name){
-  if(KCAL[slot]&&KCAL[slot][name]!==undefined)return KCAL[slot][name];
+function defaultQtyFor(slot,name){
+  const e=kdataFor(slot,name); if(e)return e.d;
   const cf=customFoodInfo(slot,name);
-  if(cf){const cat=CUSTOM_CATS.find(c=>c[0]===cf.cat); return cat?cat[2]:100}
+  if(cf){const cat=CUSTOM_CATS.find(c=>c[0]===cf.cat); return cat?cat[4]:100}
+  return 100;
+}
+function unitFor(slot,name){
+  const e=kdataFor(slot,name); if(e)return e.u;
+  const cf=customFoodInfo(slot,name);
+  if(cf){const cat=CUSTOM_CATS.find(c=>c[0]===cf.cat); return cat?cat[3]:"g"}
+  return "g";
+}
+function stepFor(slot,name){
+  const e=kdataFor(slot,name); if(e)return e.s;
+  const cf=customFoodInfo(slot,name);
+  if(cf){const cat=CUSTOM_CATS.find(c=>c[0]===cf.cat); return cat?cat[5]:25}
+  return 25;
+}
+function kcalFor(slot,name,qty){
+  const e=kdataFor(slot,name);
+  if(e){
+    const q=qty??e.d;
+    return Math.round(e.u==="g" ? e.k*q/100 : e.k*q);
+  }
+  const cf=customFoodInfo(slot,name);
+  if(cf){
+    const cat=CUSTOM_CATS.find(c=>c[0]===cf.cat);
+    if(cat){
+      const q=qty??cat[4];
+      return Math.round(cat[3]==="g" ? cat[2]*q/100 : cat[2]*q);
+    }
+  }
   return 0;
 }
-function dayTotalKcal(menu){
+function dayTotalKcal(menu,qtys){
   if(!menu)return 0;
-  return Object.keys(MENUS).reduce((sum,slot)=>sum+kcalFor(slot,menu[slot]||""),0);
+  return Object.keys(MENUS).reduce((sum,slot)=>{
+    const name=menu[slot]||"";
+    const qty=qtys?qtys[slot]??null:null;
+    return sum+kcalFor(slot,name,qty);
+  },0);
 }
+
 
 const SHOP = {
   "Proteínas":["Ternera magra o lomo de cerdo (sin grasa)","Pechuga de pavo cocida","Jamón serrano (sin tocino)","Lacón","Lomo embutido","York extra","Pescado blanco (3-4 raciones)","Pescado azul (2-3 raciones)","Conservas de pescado (aceite/escabeche)","Marisco","Huevos (docena)","Yogur descremado natural sin lactosa (6-8)"],
@@ -900,6 +1031,7 @@ S.bigText=S.bigText||false;
 S.reminderDismiss=S.reminderDismiss||{};
 S.mealPhotos=S.mealPhotos||[];
 S.weekMenu=S.weekMenu||{}; S.weekPrefs=S.weekPrefs||[]; S.mealDone=S.mealDone||{};
+S.weekMenuQty=S.weekMenuQty||{};
 S.customFoods=S.customFoods||{};
 S.hungerLog=S.hungerLog||[];
 S.bodyComp=S.bodyComp||[];
@@ -1224,9 +1356,9 @@ function toggleMealDone(slot){
 function renderKcalTotal(){
   const el=document.getElementById("kcalTotal"); if(!el)return;
   const tk=todayKey();
-  const total=dayTotalKcal(S.weekMenu[tk]);
+  const total=dayTotalKcal(S.weekMenu[tk], S.weekMenuQty[tk]);
   el.textContent=total>0
-    ? `Total aproximado de hoy: ~${total} kcal · objetivo de tu endocrino: 1.350-1.430 kcal (orientativo, no un límite estricto)`
+    ? `Total con tus cantidades: ~${total} kcal · objetivo de tu endocrino: 1.350-1.430 kcal (orientativo)`
     : "";
 }
 function renderComida(){
@@ -1235,6 +1367,8 @@ function renderComida(){
   const tk=todayKey();
   if(!S.weekMenu[tk])S.weekMenu[tk]=generateDayMenu(S.weekPrefs); // primera vez: que ya haya algo que ver
   const todayMenu=S.weekMenu[tk];
+  S.weekMenuQty[tk]=S.weekMenuQty[tk]||{};
+  const qtys=S.weekMenuQty[tk];
   const doneMap=S.mealDone[tk]||{};
   const wrap=document.getElementById("todayMealSlots");
   if(wrap){
@@ -1244,15 +1378,51 @@ function renderComida(){
       const isDone=!!doneMap[slot];
       const top=document.createElement("div"); top.className="top";
       const lbl=document.createElement("span"); lbl.className="lbl"; lbl.textContent=slot;
-      const kc=document.createElement("span"); kc.className="kcal-tag"; kc.textContent="~"+kcalFor(slot,todayMenu[slot])+" kcal";
       const btn=document.createElement("button"); btn.type="button"; btn.className="eatbtn"+(isDone?" on":"");
       btn.textContent=isDone?"✓ Comido":"Voy a comer esto";
       btn.onclick=()=>toggleMealDone(slot);
-      top.appendChild(lbl); top.appendChild(kc); top.appendChild(btn);
+      top.appendChild(lbl); top.appendChild(btn);
+
       const sel=document.createElement("select");
       sel.innerHTML=fullPool(slot).map(o=>`<option${o===todayMenu[slot]?" selected":""}>${o}</option>`).join("");
-      sel.onchange=()=>{S.weekMenu[tk][slot]=sel.value; kc.textContent="~"+kcalFor(slot,sel.value)+" kcal"; save(); renderKcalTotal()};
-      div.appendChild(top); div.appendChild(sel);
+
+      // ── STEPPER de cantidad ──
+      const foodName=()=>todayMenu[slot]||"";
+      const getQty=()=>qtys[slot]??defaultQtyFor(slot,foodName());
+      const kc=document.createElement("span"); kc.className="kcal-tag";
+      const refreshKc=()=>{kc.textContent="~"+kcalFor(slot,foodName(),getQty())+" kcal"};
+      refreshKc();
+
+      const stepper=document.createElement("div"); stepper.className="qty-stepper";
+      const bMinus=document.createElement("button"); bMinus.type="button"; bMinus.className="qty-btn"; bMinus.textContent="−";
+      const inp=document.createElement("input"); inp.type="number"; inp.className="qty-val"; inp.min=stepFor(slot,foodName());
+      inp.value=getQty(); inp.readOnly=true;
+      const unitLbl=document.createElement("span"); unitLbl.className="qty-unit"; unitLbl.textContent=unitFor(slot,foodName());
+      const updateStepper=()=>{
+        inp.value=getQty(); inp.min=stepFor(slot,foodName());
+        unitLbl.textContent=unitFor(slot,foodName());
+        refreshKc();
+      };
+      bMinus.onclick=()=>{
+        const step=stepFor(slot,foodName()), cur=getQty();
+        if(cur>step){qtys[slot]=cur-step; S.weekMenuQty[tk]=qtys; save(); updateStepper(); renderKcalTotal()}
+      };
+      const bPlus=document.createElement("button"); bPlus.type="button"; bPlus.className="qty-btn"; bPlus.textContent="+";
+      bPlus.onclick=()=>{
+        const step=stepFor(slot,foodName()), cur=getQty();
+        qtys[slot]=cur+step; S.weekMenuQty[tk]=qtys; save(); updateStepper(); renderKcalTotal();
+      };
+      stepper.appendChild(bMinus); stepper.appendChild(inp); stepper.appendChild(unitLbl);
+      stepper.appendChild(kc);
+      stepper.appendChild(bPlus);
+
+      sel.onchange=()=>{
+        S.weekMenu[tk][slot]=sel.value;
+        delete qtys[slot]; // al cambiar comida, resetea la cantidad al valor por defecto del nuevo alimento
+        save(); updateStepper(); renderKcalTotal();
+      };
+
+      div.appendChild(top); div.appendChild(sel); div.appendChild(stepper);
       wrap.appendChild(div);
     });
   }
@@ -1658,7 +1828,7 @@ function renderCharts(){
 }
 
 /* ═══════════════ IDEAS / DESEOS ═══════════════ */
-const APP_VERSION="5.2";
+const APP_VERSION="5.3";
 function saveWish(){
   const el=document.getElementById("wishVal");
   const txt=(el.value||"").trim();
