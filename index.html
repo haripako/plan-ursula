@@ -1,7 +1,15 @@
 <!DOCTYPE html>
 <!-- ═══════════════════════════════════════════════════════
-  EL PLAN DE ÚRSULA — v5.0 (5 julio 2026)
+  EL PLAN DE ÚRSULA — v5.2 (5 julio 2026)
   Historial:
+   v5.2  Nueva pestaña "Hambre": registro rápido de nivel (1-5) + causas
+         posibles (chips, sin texto libre), con vista de patrones (causa más
+         repetida, franja horaria, nivel medio) — sin objetivos ni juicios,
+         solo para identificar qué se repite
+   v5.1  Úrsula puede añadir sus propios alimentos por franja ("➕ Añade algo
+         que te apetezca" en Comida): se guardan para siempre, entran en el
+         generador semanal y en la lista de la compra, con kcal orientativas
+         calculadas por categoría (verdura/fruta/proteína/jamón/pescado/huevo)
    v5.0  Menús reescritos para ceñirse ESTRICTAMENTE al documento del
          Dr. Fernández Corbelle: fuera gazpacho, lentejas/garbanzos, queso,
          frutos secos, hummus, aguacate y chía (no estaban en el papel).
@@ -49,7 +57,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Plan Úrsula">
-<title>El Plan de Úrsula 💙 v5.0</title>
+<title>El Plan de Úrsula 💙 v5.2</title>
 <style>
 :root{
   --teal:#0E7C7B; --teal-dark:#0A5958; --aqua:#DDF1F0; --aqua-mid:#BCE3E1;
@@ -246,6 +254,13 @@ details p{margin-top:8px}
 .meal-slot select{width:100%;margin-top:6px;padding:11px 12px;font-size:14.5px;border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--ink)}
 .kcal-tag{font-size:11px;color:var(--muted);white-space:nowrap;margin-left:6px}
 
+.hunger-levels{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+.hunger-lvl{background:#fff;border:2px solid var(--line);border-radius:13px;padding:10px 2px;text-align:center}
+.hunger-lvl .e{font-size:24px;display:block}
+.hunger-lvl .n{font-size:10.5px;font-weight:700;color:var(--muted);display:block;margin-top:2px}
+.hunger-lvl.on{border-color:var(--coral);background:#FBE4E1}
+.hunger-lvl.on .n{color:var(--coral)}
+
 .feedbackModal{position:fixed;inset:0;background:rgba(12,45,46,.55);display:none;align-items:center;justify-content:center;z-index:120;padding:20px}
 .feedbackModal.show{display:flex}
 .feedbackModal-inner{background:#fff;border-radius:16px;padding:20px;max-width:320px;width:100%;text-align:center;box-shadow:var(--shadow)}
@@ -335,6 +350,23 @@ details p{margin-top:8px}
     <button class="big-btn" onclick="generateWeekMenu()">✨ Generar mi menú de la semana</button>
   </div>
   <div class="card">
+    <h2>➕ Añade algo que te apetezca</h2>
+    <p class="small">Si echas en falta algo, escríbelo aquí. Se queda guardado para siempre: te lo volveré a proponer y se añade solo a la lista de la compra. Coméntaselo antes a tu médico si tienes dudas.</p>
+    <div class="slot">
+      <label>¿En qué comida?</label>
+      <select id="customSlot"></select>
+    </div>
+    <div class="slot">
+      <label>¿Qué tipo es? (para calcular las kcal orientativas)</label>
+      <select id="customCat"></select>
+    </div>
+    <div class="log-row">
+      <input type="text" id="customFoodVal" placeholder="Ej: Sardinas a la plancha" maxlength="60">
+      <button onclick="addCustomFood()">Añadir</button>
+    </div>
+    <div id="customFoodList" class="hist" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
     <h2>📅 Menú de hoy</h2>
     <p class="small">Toca "Comido" en cada comida cuando la hagas — o "voy a comer esto" si aún no has empezado.</p>
     <p class="small" id="kcalTotal" style="margin-top:6px;font-weight:700;color:var(--teal-dark)"></p>
@@ -364,6 +396,27 @@ details p{margin-top:8px}
     <button class="big-btn ghost" onclick="resetShop()">Reiniciar lista (nueva semana)</button>
     <button class="big-btn ghost" style="margin-top:8px" onclick="sendShopToKeep()">📤 Enviar lo que falta a Google Keep</button>
     <p class="small" style="margin-top:6px">Solo funciona en el móvil con Android (Chrome) y si tienes Google Keep instalado. Si no se abre, te lleva a instalarla.</p>
+  </div>
+</section>
+
+<!-- ═══════ HAMBRE ═══════ -->
+<section class="view" id="v-hambre">
+  <div class="card">
+    <h2>🍽️ Tengo hambre ahora</h2>
+    <p class="small">Sin juicios: solo se trata de entender a tu cuerpo, no de tener "poca" hambre. Anótalo cuando quieras.</p>
+    <div class="hunger-levels" id="hungerLevels"></div>
+    <p class="small" style="margin-top:10px;font-weight:700;color:var(--teal-dark)">¿Qué crees que ha podido influir? (opcional, marca lo que encaje)</p>
+    <div class="chip-picker" id="hungerTags"></div>
+    <button class="big-btn" onclick="saveHunger()">Guardar</button>
+  </div>
+  <div class="card">
+    <h2>📊 Tus patrones</h2>
+    <p class="small">Nada de esto es un objetivo a cumplir — es solo para que tú (y si quieres, tu médico) veáis qué se repite.</p>
+    <div id="hungerStats" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <h2>🕒 Historial</h2>
+    <div id="hungerHist" class="hist"></div>
   </div>
 </section>
 
@@ -534,6 +587,7 @@ details p{margin-top:8px}
   <button data-v="hoy" class="active"><span class="ico">💪</span>Hoy</button>
   <button data-v="semana"><span class="ico">📅</span>Semana</button>
   <button data-v="comida"><span class="ico">🍽️</span>Comida</button>
+  <button data-v="hambre"><span class="ico">🥣</span>Hambre</button>
   <button data-v="aprende"><span class="ico">📚</span>Aprende</button>
   <button data-v="yo"><span class="ico">🏆</span>Yo</button>
 </nav>
@@ -763,6 +817,31 @@ const PROTEIN_TAGS = {
 };
 const PREF_TAGS=[["pescado","🐟 Pescado"],["carne","🥩 Carne"],["jamon","🍖 Jamón/embutido magro"],["marisco","🦐 Marisco"],["huevo","🥚 Huevo"]];
 
+// Categorías para lo que Úrsula añada ella misma: como no hay forma de calcular
+// kcal reales de un plato inventado, se usa una media orientativa por tipo de
+// alimento. Si la categoría es de proteína, además sirve para el generador de
+// preferencias semanales (mismo mecanismo que PROTEIN_TAGS).
+const CUSTOM_CATS=[
+  ["verdura","🥦 Verdura / caldo",35,null],
+  ["fruta","🍎 Fruta",70,null],
+  ["proteina","🥩 Carne magra",180,"carne"],
+  ["jamon","🍖 Jamón / embutido magro",90,"jamon"],
+  ["pescado","🐟 Pescado / marisco",140,"pescado"],
+  ["huevo","🥚 Huevo",90,"huevo"],
+  ["otro","🍽️ Otro",100,null]
+];
+
+// Medidor de hambre: solo para entender patrones, nunca para juzgar ni para
+// marcar un objetivo de "tener menos hambre".
+const HUNGER_LEVELS=[[1,"😌","Poquita"],[2,"🙂","Un poco"],[3,"😐","Normal"],[4,"😕","Bastante"],[5,"😖","Mucha"]];
+const HUNGER_TAGS=[["tiempo","⏰ Hace mucho que comí"],["dormir","😴 Dormí mal"],["estres","😣 Estrés o nervios"],["ejercicio","🏋️ Después de hacer ejercicio"],["olvido","🍽️ Se me olvidó una comida"]];
+function hungerHourBucket(hour){
+  if(hour>=6&&hour<12)return "por la mañana";
+  if(hour>=12&&hour<16)return "al mediodía";
+  if(hour>=16&&hour<20)return "por la tarde";
+  return "por la noche";
+}
+
 // Kcal ORIENTATIVAS por plato (estimación general, no una medición real de cada
 // ración). Sirven para hacerse una idea, nunca como límite estricto: el rango
 // real de Úrsula (1.350-1.430 kcal/día) lo fijó su endocrino, no esta tabla.
@@ -776,7 +855,15 @@ const KCAL = {
   "Cena · verdura":{"Ensalada verde (lechuga)":30,"Espinacas":35,"Grelos":40,"Berro":15,"Cardo":40,"Rábano":15,"Romanescu":35,"Rúcula":15,"Borraja":30,"Canónigos":15,"Caldo natural desgrasado (sin patata ni legumbre)":40},
   "Cena · proteína":{"Carne magra a la plancha (sin grasa)":190,"Jamón serrano (sin tocino)":110,"Lacón":100,"Lomo embutido":140,"York extra":70,"Pechuga de pavo cocida":100,"Pescado blanco a la plancha":140,"Pescado azul a la plancha":220,"Conservas de pescado (aceite o escabeche)":180,"Marisco":130,"Huevo cocido":80,"Tortilla (huevos)":180,"Huevos revueltos":180,"Huevo a la plancha":90}
 };
-function kcalFor(slot,name){return (KCAL[slot]&&KCAL[slot][name])||0}
+function customFoodInfo(slot,name){
+  return (S.customFoods[slot]||[]).find(c=>c.name===name);
+}
+function kcalFor(slot,name){
+  if(KCAL[slot]&&KCAL[slot][name]!==undefined)return KCAL[slot][name];
+  const cf=customFoodInfo(slot,name);
+  if(cf){const cat=CUSTOM_CATS.find(c=>c[0]===cf.cat); return cat?cat[2]:100}
+  return 0;
+}
 function dayTotalKcal(menu){
   if(!menu)return 0;
   return Object.keys(MENUS).reduce((sum,slot)=>sum+kcalFor(slot,menu[slot]||""),0);
@@ -813,6 +900,8 @@ S.bigText=S.bigText||false;
 S.reminderDismiss=S.reminderDismiss||{};
 S.mealPhotos=S.mealPhotos||[];
 S.weekMenu=S.weekMenu||{}; S.weekPrefs=S.weekPrefs||[]; S.mealDone=S.mealDone||{};
+S.customFoods=S.customFoods||{};
+S.hungerLog=S.hungerLog||[];
 S.bodyComp=S.bodyComp||[];
 S.checkins=S.checkins||{}; S.checkinAnswered=S.checkinAnswered||{}; S.painStreak=S.painStreak||{};
 // Migración desde V1 (por si existiera): separar claves "menu-" de days
@@ -1030,16 +1119,22 @@ function weekDateKeys(){
   for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(mon.getDate()+i);out.push(dateKey(d))}
   return out;
 }
+function fullPool(slot){
+  return MENUS[slot].concat((S.customFoods[slot]||[]).map(c=>c.name));
+}
+function tagsForItem(slot,name){
+  if(PROTEIN_TAGS[slot]&&PROTEIN_TAGS[slot][name])return PROTEIN_TAGS[slot][name];
+  const cf=customFoodInfo(slot,name);
+  if(cf){const cat=CUSTOM_CATS.find(c=>c[0]===cf.cat); return (cat&&cat[3])?[cat[3]]:[]}
+  return [];
+}
 function pickMenuItem(slot,prefs){
-  const tagsMap=PROTEIN_TAGS[slot];
-  if(tagsMap&&prefs&&prefs.length){
-    const matching=MENUS[slot].filter(o=>{
-      const tags=tagsMap[o]||[];
-      return tags.some(t=>prefs.includes(t));
-    });
+  const pool=fullPool(slot);
+  if(prefs&&prefs.length){
+    const matching=pool.filter(o=>tagsForItem(slot,o).some(t=>prefs.includes(t)));
     if(matching.length)return matching[Math.floor(Math.random()*matching.length)];
   }
-  return MENUS[slot][Math.floor(Math.random()*MENUS[slot].length)];
+  return pool[Math.floor(Math.random()*pool.length)];
 }
 function generateDayMenu(prefs){
   const day={};
@@ -1067,6 +1162,54 @@ function renderPrefChips(){
     wrap.appendChild(b);
   });
 }
+
+/* ═══════════════ ALIMENTOS QUE ÚRSULA AÑADE ELLA MISMA ═══════════════ */
+// Se guardan por franja, para siempre, y entran en el generador semanal, en
+// el desplegable del día y en la lista de la compra. Las kcal son solo una
+// media orientativa según la categoría elegida (no hay forma de calcularlas
+// de verdad sin una base de datos nutricional).
+function renderCustomFoodUI(){
+  const slotSel=document.getElementById("customSlot"), catSel=document.getElementById("customCat");
+  if(!slotSel||!catSel)return;
+  if(!slotSel.dataset.filled){
+    slotSel.innerHTML=Object.keys(MENUS).map(s=>`<option>${s}</option>`).join("");
+    slotSel.dataset.filled="1";
+  }
+  if(!catSel.dataset.filled){
+    catSel.innerHTML=CUSTOM_CATS.map(([id,label])=>`<option value="${id}">${label}</option>`).join("");
+    catSel.dataset.filled="1";
+  }
+  const list=document.getElementById("customFoodList"); if(!list)return;
+  const rows=[];
+  Object.keys(S.customFoods).forEach(slot=>{
+    (S.customFoods[slot]||[]).forEach((cf,i)=>{
+      const cat=CUSTOM_CATS.find(c=>c[0]===cf.cat);
+      rows.push(`<div style="display:flex;align-items:center;gap:8px"><span style="flex:1">${slot} · ${cf.name} <span class="kcal-tag">~${cat?cat[2]:100} kcal</span></span><button onclick="delCustomFood('${slot.replace(/'/g,"\\'")}',${i})" style="color:var(--coral);font-weight:800;padding:4px 8px">✕</button></div>`);
+    });
+  });
+  list.innerHTML=rows.length?rows.join(""):`<div style="border:none;color:var(--muted)">Aún no has añadido nada tuyo. ¡Prueba arriba! ✨</div>`;
+}
+function addCustomFood(){
+  const slot=document.getElementById("customSlot").value;
+  const cat=document.getElementById("customCat").value;
+  const input=document.getElementById("customFoodVal");
+  const name=(input.value||"").trim();
+  if(!name)return toast("Escribe primero qué te apetece 😊");
+  S.customFoods[slot]=S.customFoods[slot]||[];
+  if(S.customFoods[slot].some(c=>c.name.toLowerCase()===name.toLowerCase())){
+    toast("Ya lo tenías añadido en esa comida 😊"); return;
+  }
+  S.customFoods[slot].push({name,cat});
+  save(); input.value="";
+  renderCustomFoodUI(); renderComida();
+  toast(`"${name}" añadido a ${slot}. Ya te lo propondré 💙`);
+}
+function delCustomFood(slot,i){
+  if(!S.customFoods[slot])return;
+  S.customFoods[slot].splice(i,1);
+  save(); renderCustomFoodUI(); renderComida();
+  toast("Quitado de tus alimentos añadidos");
+}
 function randomMenu(){
   const tk=todayKey();
   S.weekMenu[tk]=generateDayMenu(S.weekPrefs);
@@ -1088,6 +1231,7 @@ function renderKcalTotal(){
 }
 function renderComida(){
   renderPrefChips();
+  renderCustomFoodUI();
   const tk=todayKey();
   if(!S.weekMenu[tk])S.weekMenu[tk]=generateDayMenu(S.weekPrefs); // primera vez: que ya haya algo que ver
   const todayMenu=S.weekMenu[tk];
@@ -1106,7 +1250,7 @@ function renderComida(){
       btn.onclick=()=>toggleMealDone(slot);
       top.appendChild(lbl); top.appendChild(kc); top.appendChild(btn);
       const sel=document.createElement("select");
-      sel.innerHTML=MENUS[slot].map(o=>`<option${o===todayMenu[slot]?" selected":""}>${o}</option>`).join("");
+      sel.innerHTML=fullPool(slot).map(o=>`<option${o===todayMenu[slot]?" selected":""}>${o}</option>`).join("");
       sel.onchange=()=>{S.weekMenu[tk][slot]=sel.value; kc.textContent="~"+kcalFor(slot,sel.value)+" kcal"; save(); renderKcalTotal()};
       div.appendChild(top); div.appendChild(sel);
       wrap.appendChild(div);
@@ -1207,6 +1351,19 @@ function renderShop(){
       wrap.appendChild(div);
     });
   });
+  // Categoría dinámica: lo que Úrsula ha ido añadiendo ella misma, en cualquier franja
+  const customNames=[...new Set(Object.values(S.customFoods).flat().map(c=>c.name))];
+  if(customNames.length){
+    const cat="Tus alimentos añadidos";
+    const h=document.createElement("div"); h.className="shop-cat"; h.textContent=cat; wrap.appendChild(h);
+    customNames.forEach(item=>{
+      const id=cat+"|"+item, done=S.shop[id];
+      const div=document.createElement("div"); div.className="shop-item"+(done?" done":"");
+      div.innerHTML=`<div class="chk">${done?"✓":""}</div><span>${item}</span>`;
+      div.onclick=()=>{S.shop[id]=!S.shop[id];save();renderShop()};
+      wrap.appendChild(div);
+    });
+  }
 }
 function resetShop(){S.shop={};save();renderShop();toast("Lista nueva. ¡A por la semana! 🛒")}
 
@@ -1226,6 +1383,15 @@ function buildShoppingText(){
     pending.forEach(item=>lines.push("- "+item));
     lines.push("");
   });
+  const customNames=[...new Set(Object.values(S.customFoods).flat().map(c=>c.name))];
+  const customCat="Tus alimentos añadidos";
+  const customPending=customNames.filter(item=>!S.shop[customCat+"|"+item]);
+  if(customPending.length){
+    any=true;
+    lines.push(customCat.toUpperCase());
+    customPending.forEach(item=>lines.push("- "+item));
+    lines.push("");
+  }
   if(!any)lines.push("¡Ya lo tienes todo marcado! 🎉");
   return lines.join("\n");
 }
@@ -1359,6 +1525,100 @@ function dismissCheckin(){
   S.checkins[tk+"|"+type]=true; save(); renderToday();
 }
 
+/* ═══════════════ MEDIDOR DE HAMBRE ═══════════════ */
+// Solo para identificar patrones junto a Úrsula (y su médico si hace falta).
+// Nunca pone un objetivo ni valora si el número "está bien". Cada registro
+// guarda hora, nivel (1-5) y, si ella quiere, qué cree que ha influido.
+let hungerPickLevel=null, hungerPickTags=[];
+function renderHungerLevels(){
+  const wrap=document.getElementById("hungerLevels"); if(!wrap)return;
+  wrap.innerHTML="";
+  HUNGER_LEVELS.forEach(([lvl,emoji,label])=>{
+    const b=document.createElement("button");
+    b.type="button"; b.className="hunger-lvl"+(hungerPickLevel===lvl?" on":"");
+    b.innerHTML=`<span class="e">${emoji}</span><span class="n">${label}</span>`;
+    b.onclick=()=>{hungerPickLevel=(hungerPickLevel===lvl?null:lvl); renderHungerLevels()};
+    wrap.appendChild(b);
+  });
+}
+function renderHungerTagsPicker(){
+  const wrap=document.getElementById("hungerTags"); if(!wrap)return;
+  wrap.innerHTML="";
+  HUNGER_TAGS.forEach(([tag,label])=>{
+    const b=document.createElement("button");
+    b.type="button"; b.className="chip-opt"+(hungerPickTags.includes(tag)?" on":"");
+    b.textContent=label;
+    b.onclick=()=>{
+      const i=hungerPickTags.indexOf(tag);
+      if(i===-1)hungerPickTags.push(tag); else hungerPickTags.splice(i,1);
+      renderHungerTagsPicker();
+    };
+    wrap.appendChild(b);
+  });
+}
+function saveHunger(){
+  if(!hungerPickLevel)return toast("Elige cuánta hambre tienes, aunque sea aproximado 😊");
+  const now=new Date(); const p=n=>String(n).padStart(2,"0");
+  S.hungerLog.unshift({d:todayKey(),t:p(now.getHours())+":"+p(now.getMinutes()),level:hungerPickLevel,tags:hungerPickTags.slice()});
+  S.hungerLog=S.hungerLog.slice(0,200);
+  save();
+  hungerPickLevel=null; hungerPickTags=[];
+  renderHunger();
+  toast("Anotado, gracias por contármelo 💙");
+}
+function delHunger(i){
+  S.hungerLog.splice(i,1); save(); renderHunger();
+  toast("Registro borrado");
+}
+function renderHungerStats(){
+  const box=document.getElementById("hungerStats"); if(!box)return;
+  const log=S.hungerLog;
+  if(log.length<3){
+    box.innerHTML=`<p class="small">Con 2-3 registros más ya empiezo a verte patrones 📈</p>`;
+    return;
+  }
+  const tagCounts={};
+  HUNGER_TAGS.forEach(([tag])=>tagCounts[tag]=0);
+  log.forEach(e=>(e.tags||[]).forEach(t=>{if(tagCounts[t]!==undefined)tagCounts[t]++}));
+  const topTag=Object.entries(tagCounts).sort((a,b)=>b[1]-a[1])[0];
+  const bucketCounts={};
+  log.forEach(e=>{
+    const hour=parseInt((e.t||"0:0").split(":")[0],10);
+    const b=hungerHourBucket(hour);
+    bucketCounts[b]=(bucketCounts[b]||0)+1;
+  });
+  const topBucket=Object.entries(bucketCounts).sort((a,b)=>b[1]-a[1])[0];
+  const lines=[];
+  if(topTag&&topTag[1]>0){
+    const label=(HUNGER_TAGS.find(t=>t[0]===topTag[0])||[,"",topTag[0]])[1];
+    lines.push(`La causa que más se repite es: <b>${label}</b> (en ${topTag[1]} de ${log.length} registros).`);
+  }
+  if(topBucket){
+    lines.push(`El hambre te aparece más a menudo <b>${topBucket[0]}</b>.`);
+  }
+  const avg=(log.reduce((s,e)=>s+e.level,0)/log.length).toFixed(1);
+  lines.push(`Nivel medio registrado: <b>${avg}/5</b> (sobre ${log.length} registros).`);
+  box.innerHTML=lines.map(l=>`<p class="small">${l}</p>`).join("");
+}
+function renderHungerHist(){
+  const box=document.getElementById("hungerHist"); if(!box)return;
+  if(!S.hungerLog.length){
+    box.innerHTML=`<div style="border:none;color:var(--muted)">Aún no hay registros. En cuanto anotes el primero, aparece aquí ✨</div>`;
+    return;
+  }
+  box.innerHTML=S.hungerLog.slice(0,20).map((e,i)=>{
+    const lvl=HUNGER_LEVELS.find(l=>l[0]===e.level)||[,"","?"];
+    const tagLabels=(e.tags||[]).map(t=>(HUNGER_TAGS.find(h=>h[0]===t)||[,t])[1]).join(", ");
+    return `<div style="display:flex;align-items:center;gap:8px"><span style="flex:1">${e.d} · ${e.t} · ${lvl[1]} ${lvl[2]}${tagLabels?" · "+tagLabels:""}</span><button onclick="delHunger(${i})" style="color:var(--coral);font-weight:800;padding:4px 8px">✕</button></div>`;
+  }).join("");
+}
+function renderHunger(){
+  renderHungerLevels();
+  renderHungerTagsPicker();
+  renderHungerStats();
+  renderHungerHist();
+}
+
 /* ═══════════════ GRÁFICOS (SVG nativo, sin librerías) ═══════════════ */
 function renderChart(elId,data,unit,color,goodDown){
   const el=document.getElementById(elId); if(!el)return;
@@ -1398,7 +1658,7 @@ function renderCharts(){
 }
 
 /* ═══════════════ IDEAS / DESEOS ═══════════════ */
-const APP_VERSION="5.0";
+const APP_VERSION="5.2";
 function saveWish(){
   const el=document.getElementById("wishVal");
   const txt=(el.value||"").trim();
@@ -1698,7 +1958,7 @@ function confetti(){
 // Al volver a la app (día siguiente con la pestaña abierta), refrescar el día
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)renderAll()});
 
-function renderAll(){renderToday();renderWeek();renderComida();renderFeels();renderBody();renderLevelSummary();renderWishes();renderMealPhotos();renderLearnChips();applyTextSize();checkBadges(true);renderReminder()}
+function renderAll(){renderToday();renderWeek();renderComida();renderFeels();renderBody();renderLevelSummary();renderWishes();renderMealPhotos();renderLearnChips();renderHunger();applyTextSize();checkBadges(true);renderReminder()}
 document.getElementById("verLine").textContent="Versión de la app: "+APP_VERSION+" · 5 julio 2026";
 document.getElementById("v-hoy").classList.add("show");
 renderAll();
