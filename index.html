@@ -1,7 +1,12 @@
 <!DOCTYPE html>
 <!-- ═══════════════════════════════════════════════════════
-  EL PLAN DE ÚRSULA — v5.9 (5 julio 2026)
+  EL PLAN DE ÚRSULA — v6.0 (5 julio 2026)
   Historial:
+   v6.0  Nueva sección en Yo: "📊 Exportar datos de uso" — un JSON distinto
+         de la copia de seguridad, con estadísticas ya calculadas (ejercicio
+         por tipo y por id, comida más elegida por franja, patrones de
+         hambre, tendencias de cuerpo) además de los datos completos en
+         crudo, pensado para decidir qué mejorar en la app
    v5.9  FIX importante: marcar un ejercicio como hecho ya no desaparece al
          cambiar de nivel OTRO ejercicio de la misma sesión (antes se
          guardaba por posición en la lista; ahora se guarda por el nombre
@@ -78,7 +83,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Plan Úrsula">
-<title>El Plan de Úrsula 💙 v5.9</title>
+<title>El Plan de Úrsula 💙 v6.0</title>
 <style>
 :root{
   --ink:#0F2624; --ink-soft:#274B48; --teal:#0E7C7B; --teal-dark:#0A5958;
@@ -609,6 +614,11 @@ details p{margin-top:8px}
     <button class="big-btn ghost" onclick="exportData()">Descargar copia de mis datos</button>
     <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importData(event)">
     <button class="big-btn ghost" style="margin-top:8px" onclick="document.getElementById('importFile').click()">📥 Importar una copia guardada</button>
+  </div>
+  <div class="card">
+    <h2>📊 Datos para mejorar la app</h2>
+    <p class="small">Esto es distinto de la copia de arriba: incluye estadísticas ya calculadas (qué se repite, qué falta) para que Francisco pueda decidir qué mejorar. No sirve para restaurar la app — para eso, usa "Descargar copia de mis datos".</p>
+    <button class="big-btn ghost" onclick="exportAnalytics()">📊 Exportar datos de uso</button>
   </div>
 </section>
 
@@ -1891,7 +1901,7 @@ function renderCharts(){
 }
 
 /* ═══════════════ IDEAS / DESEOS ═══════════════ */
-const APP_VERSION="5.9";
+const APP_VERSION="6.0";
 function saveWish(){
   const el=document.getElementById("wishVal");
   const txt=(el.value||"").trim();
@@ -2028,6 +2038,117 @@ function exportData(){
   a.download="plan-ursula-copia-"+todayKey()+".json";a.click();
   setTimeout(()=>URL.revokeObjectURL(url),3000); // FIX: liberar memoria
 }
+
+/* ═══════════════ EXPORTAR PARA ANÁLISIS (para mejorar la app a partir del uso real) ═══════════════ */
+// Distinto de "Descargar copia de mis datos": aquella es un backup literal para restaurar.
+// Esta añade, además de los datos crudos, estadísticas ya calculadas — para no tener que
+// procesar el JSON a mano al decidir qué mejorar.
+function pct(n,d){return d>0?Math.round((n/d)*100):0}
+function buildAnalyticsExport(){
+  const st=calcStreaks();
+  const allDates=Object.keys(S.days).filter(k=>DATE_RE.test(k)).sort();
+  const daysByType={};
+  Object.values(S.acts).forEach(t=>{daysByType[t]=(daysByType[t]||0)+1});
+
+  // Ejercicio: por cada id, cuántas veces "bien" vs "duele" y nivel actual
+  const exerciseStats={};
+  Object.keys(S.checkinAnswered).forEach(key=>{
+    const id=key.split("|")[1];
+    if(!id)return;
+    exerciseStats[id]=exerciseStats[id]||{ok:0,pain:0};
+    exerciseStats[id][S.checkinAnswered[key]==="pain"?"pain":"ok"]++;
+  });
+  Object.keys(exerciseStats).forEach(id=>{
+    exerciseStats[id].name=EXO_NAME[id]||id;
+    exerciseStats[id].nivelActual=S.levels[id]||"A";
+  });
+
+  // Comida: qué se elige más por franja, en todo el histórico de weekMenu
+  const foodFreq={};
+  Object.values(S.weekMenu).forEach(day=>{
+    Object.entries(day||{}).forEach(([slot,name])=>{
+      foodFreq[slot]=foodFreq[slot]||{};
+      foodFreq[slot][name]=(foodFreq[slot][name]||0)+1;
+    });
+  });
+  const topFoodPerSlot={};
+  Object.entries(foodFreq).forEach(([slot,counts])=>{
+    const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+    topFoodPerSlot[slot]=sorted.slice(0,3).map(([name,n])=>({name,veces:n}));
+  });
+  const totalMealSlotsMarked=Object.values(S.mealDone).reduce((sum,day)=>sum+Object.values(day).filter(Boolean).length,0);
+
+  // Hambre: mismo cálculo que la vista, pero exportado en crudo
+  const hungerTagCounts={};
+  HUNGER_TAGS.forEach(([tag])=>hungerTagCounts[tag]=0);
+  S.hungerLog.forEach(e=>(e.tags||[]).forEach(t=>{if(hungerTagCounts[t]!==undefined)hungerTagCounts[t]++}));
+  const hungerBucketCounts={};
+  S.hungerLog.forEach(e=>{
+    const hour=parseInt((e.t||"0:0").split(":")[0],10);
+    const b=hungerHourBucket(hour);
+    hungerBucketCounts[b]=(hungerBucketCounts[b]||0)+1;
+  });
+
+  // Cuerpo: primera vs última medida
+  const trend=arr=>arr.length?{primera:arr[arr.length-1],ultima:arr[0],n:arr.length}:{n:0};
+
+  return {
+    meta:{
+      exportado:todayKey(),
+      version:APP_VERSION,
+      schemaVersion:S.schemaVersion,
+      primerUso:allDates[0]||null,
+      diasConAlgunRegistro:allDates.length
+    },
+    engagement:{
+      pts:S.pts,
+      rachaActual:st.cur,
+      mejorRacha:st.best,
+      sesionesTotales:st.total,
+      logrosConseguidos:BADGES.filter((b,i)=>S.badges[i]).map(b=>b[1]),
+      ideasEnviadas:S.wishes.length,
+      textoGrandeActivado:S.bigText
+    },
+    ejercicio:{
+      sesionesPorTipo:daysByType,
+      porEjercicio:exerciseStats
+    },
+    comida:{
+      diasDeMenuGenerados:Object.keys(S.weekMenu).length,
+      masElegidoPorFranja:topFoodPerSlot,
+      preferenciasActuales:S.weekPrefs,
+      alimentosPropiosAnadidos:Object.entries(S.customFoods).flatMap(([slot,arr])=>arr.map(c=>({slot,...c}))),
+      menuCumplidoDias:Object.keys(S.menuDays).length,
+      franjasMarcadasComido:totalMealSlotsMarked
+    },
+    hambre:{
+      totalRegistros:S.hungerLog.length,
+      porCausa:hungerTagCounts,
+      porFranjaHoraria:hungerBucketCounts,
+      nivelMedio:S.hungerLog.length?Number((S.hungerLog.reduce((s,e)=>s+e.level,0)/S.hungerLog.length).toFixed(2)):null
+    },
+    cuerpo:{
+      cintura:trend(S.waist),
+      peso:trend(S.weight),
+      composicion:trend(S.bodyComp)
+    },
+    sensaciones:{
+      registros:S.feels.length,
+      media:S.feels.length?Number((S.feels.reduce((s,f)=>s+f.v,0)/S.feels.length).toFixed(1)):null
+    },
+    datosCompletos:S
+  };
+}
+function exportAnalytics(){
+  const data=buildAnalyticsExport();
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;
+  a.download="plan-ursula-analisis-"+todayKey()+".json";a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+  toast("📊 Exportado. Este es para analizar y mejorar la app, no para restaurar.");
+}
+
 function importData(ev){
   const file=ev.target.files&&ev.target.files[0];
   if(!file)return;
