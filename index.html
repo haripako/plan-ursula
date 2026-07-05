@@ -1,7 +1,11 @@
 <!DOCTYPE html>
 <!-- ═══════════════════════════════════════════════════════
-  EL PLAN DE ÚRSULA — v4.2 (5 julio 2026)
+  EL PLAN DE ÚRSULA — v4.3 (5 julio 2026)
   Historial:
+   v4.3  Menús ampliados con comida real de la dieta del Dr. Fernández Corbelle
+         (verduras, jamones, conservas, marisco) manteniendo las prohibiciones
+         ya fijadas (sin zumos ni refrescos, ni light/zero) · test de
+         regresión para que esas prohibiciones no puedan reintroducirse
    v4.2  Fix: al rectificar el día (miss-click), también se limpian las
          respuestas de feedback por tanda de ese día
    v4.1  Feedback inmediato tras la primera tanda de cada ejercicio (¿bien o
@@ -37,7 +41,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Plan Úrsula">
-<title>El Plan de Úrsula 💙 v4.2</title>
+<title>El Plan de Úrsula 💙 v4.3</title>
 <style>
 :root{
   --teal:#0E7C7B; --teal-dark:#0A5958; --aqua:#DDF1F0; --aqua-mid:#BCE3E1;
@@ -712,14 +716,14 @@ const DAY_NAMES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","S
 const DAY_SHORT = ["D","L","M","X","J","V","S"];
 
 const MENUS = {
-  "Desayuno":["Tostada integral + aceite + pavo","Tostada integral + aceite + atún","Tostada integral + queso fresco + tomate","Tostada + jamón dulce + queso fresco","Tostada + ⅓ aguacate + huevo duro","Yogur natural + nueces","Yogur natural + 1 cda. chía","Yogur natural + almendras + canela","Tortilla 2 huevos + tomate","Queso fresco + fruta troceada + nueces"],
-  "Media mañana":["Manzana","Pera","Naranja entera","1-2 kiwis","2 mandarinas","Tazón pequeño de fresas","10-12 almendras","6-8 nueces","Yogur natural","2 lonchas de pavo"],
-  "Comida · entrante":["Ensalada verde","Ensalada de tomate","Gazpacho (sin pan)","Caldo de verduras","Crema de calabacín","Crema de calabaza","Sopa de verduras","Ensalada pepino y tomate"],
-  "Comida · proteína":["Merluza plancha/horno","Dorada o lubina al horno","Salmón al horno","Bacalao","Pechuga de pollo","Pechuga de pavo","Ternera magra plancha","Lomo de cerdo magro","Gambas o sepia plancha","2 huevos (tortilla/revuelto)","Lentejas o garbanzos (½ plato)"],
-  "Comida · guarnición":["Verduras salteadas","Brócoli al vapor","Judías verdes","Pimientos asados","Zanahoria y calabacín","Berenjena plancha","Espárragos","Champiñones","Coliflor al vapor","Menestra","Ensalada"],
-  "Merienda":["Yogur natural","Queso fresco con tomate","2 lonchas jamón serrano","Lata pequeña atún/sardinas","Puñadito frutos secos","1 huevo duro","Zanahoria/pepino + hummus","Yogur + canela"],
-  "Cena · verdura":["Crema de calabacín","Crema de verduras","Sopa de verduras","Caldo","Verduras a la plancha","Espárragos","Ensalada templada","Pisto (sin pan)"],
-  "Cena · proteína":["Tortilla francesa 2 huevos","Revuelto con champiñones/espinacas","Pescado blanco plancha","Salmón","Pavo o pollo plancha","Gambas o sepia","Tortilla de calabacín","Queso fresco + jamón dulce"]
+  "Desayuno":["Tostada integral + aceite + pavo","Tostada integral + aceite + atún","Tostada integral + queso fresco + tomate","Tostada + jamón dulce + queso fresco","Tostada + ⅓ aguacate + huevo duro","Yogur natural + nueces","Yogur natural + 1 cda. chía","Yogur natural + almendras + canela","Tortilla 2 huevos + tomate","Queso fresco + fruta troceada + nueces","Yogur natural sin lactosa","Tostada integral con aceite de oliva"],
+  "Media mañana":["Manzana","Pera","Naranja entera","1-2 kiwis","2 mandarinas","Tazón pequeño de fresas","10-12 almendras","6-8 nueces","Yogur natural","2 lonchas de pavo","Piña natural"],
+  "Comida · entrante":["Ensalada verde","Ensalada de tomate","Gazpacho (sin pan)","Caldo de verduras","Crema de calabacín","Crema de calabaza","Sopa de verduras","Ensalada pepino y tomate","Escarola y endibias con vinagreta","Espárragos con jamón","Puerros a la plancha","Pimientos verdes a la plancha"],
+  "Comida · proteína":["Merluza plancha/horno","Dorada o lubina al horno","Salmón al horno","Bacalao","Pechuga de pollo","Pechuga de pavo","Ternera magra plancha","Lomo de cerdo magro","Gambas o sepia plancha","2 huevos (tortilla/revuelto)","Lentejas o garbanzos (½ plato)","Conservas de pescado en aceite/escabeche","Marisco variado (gambas, mejillones)"],
+  "Comida · guarnición":["Verduras salteadas","Brócoli al vapor","Judías verdes","Pimientos asados","Zanahoria y calabacín","Berenjena plancha","Espárragos","Champiñones","Coliflor al vapor","Menestra","Ensalada","Coles de Bruselas","Alcachofas al vapor"],
+  "Merienda":["Yogur natural","Queso fresco con tomate","2 lonchas jamón serrano","Lata pequeña atún/sardinas","Puñadito frutos secos","1 huevo duro","Zanahoria/pepino + hummus","Yogur + canela","Lonchas de lomo embutido","York extra"],
+  "Cena · verdura":["Crema de calabacín","Crema de verduras","Sopa de verduras","Caldo","Verduras a la plancha","Espárragos","Ensalada templada","Pisto (sin pan)","Escarola con vinagreta","Champiñones al ajillo"],
+  "Cena · proteína":["Tortilla francesa 2 huevos","Revuelto con champiñones/espinacas","Pescado blanco plancha","Salmón","Pavo o pollo plancha","Gambas o sepia","Tortilla de calabacín","Queso fresco + jamón dulce","Conservas de pescado en escabeche","Marisco variado"]
 };
 
 // Etiquetas de "apetece" solo para las franjas de proteína (comida y cena), que es
@@ -729,16 +733,18 @@ const PROTEIN_TAGS = {
     "Merluza plancha/horno":["pescado"], "Dorada o lubina al horno":["pescado"], "Salmón al horno":["pescado"], "Bacalao":["pescado"],
     "Pechuga de pollo":["pollo"], "Pechuga de pavo":["pollo"],
     "Ternera magra plancha":["carne"], "Lomo de cerdo magro":["carne"],
-    "Gambas o sepia plancha":["marisco"],
+    "Gambas o sepia plancha":["marisco"], "Marisco variado (gambas, mejillones)":["marisco"],
     "2 huevos (tortilla/revuelto)":["huevo"],
-    "Lentejas o garbanzos (½ plato)":["legumbre"]
+    "Lentejas o garbanzos (½ plato)":["legumbre"],
+    "Conservas de pescado en aceite/escabeche":["pescado"]
   },
   "Cena · proteína": {
     "Tortilla francesa 2 huevos":["huevo"], "Revuelto con champiñones/espinacas":["huevo"],
     "Pescado blanco plancha":["pescado"], "Salmón":["pescado"],
     "Pavo o pollo plancha":["pollo"],
-    "Gambas o sepia":["marisco"],
+    "Gambas o sepia":["marisco"], "Marisco variado":["marisco"],
     "Tortilla de calabacín":["huevo"],
+    "Conservas de pescado en escabeche":["pescado"],
     "Queso fresco + jamón dulce":["otros"]
   }
 };
@@ -748,14 +754,14 @@ const PREF_TAGS=[["pescado","🐟 Pescado"],["pollo","🍗 Pollo/pavo"],["carne"
 // ración). Sirven para hacerse una idea, nunca como límite estricto: el rango
 // real de Úrsula (1.350-1.430 kcal/día) lo fijó su endocrino, no esta tabla.
 const KCAL = {
-  "Desayuno":{"Tostada integral + aceite + pavo":220,"Tostada integral + aceite + atún":230,"Tostada integral + queso fresco + tomate":200,"Tostada + jamón dulce + queso fresco":210,"Tostada + ⅓ aguacate + huevo duro":260,"Yogur natural + nueces":180,"Yogur natural + 1 cda. chía":140,"Yogur natural + almendras + canela":190,"Tortilla 2 huevos + tomate":200,"Queso fresco + fruta troceada + nueces":220},
-  "Media mañana":{"Manzana":80,"Pera":85,"Naranja entera":70,"1-2 kiwis":90,"2 mandarinas":70,"Tazón pequeño de fresas":50,"10-12 almendras":90,"6-8 nueces":120,"Yogur natural":90,"2 lonchas de pavo":50},
-  "Comida · entrante":{"Ensalada verde":40,"Ensalada de tomate":50,"Gazpacho (sin pan)":70,"Caldo de verduras":30,"Crema de calabacín":90,"Crema de calabaza":100,"Sopa de verduras":60,"Ensalada pepino y tomate":45},
-  "Comida · proteína":{"Merluza plancha/horno":140,"Dorada o lubina al horno":160,"Salmón al horno":250,"Bacalao":120,"Pechuga de pollo":165,"Pechuga de pavo":150,"Ternera magra plancha":190,"Lomo de cerdo magro":180,"Gambas o sepia plancha":110,"2 huevos (tortilla/revuelto)":180,"Lentejas o garbanzos (½ plato)":200},
-  "Comida · guarnición":{"Verduras salteadas":80,"Brócoli al vapor":40,"Judías verdes":45,"Pimientos asados":50,"Zanahoria y calabacín":50,"Berenjena plancha":60,"Espárragos":30,"Champiñones":35,"Coliflor al vapor":35,"Menestra":90,"Ensalada":40},
-  "Merienda":{"Yogur natural":90,"Queso fresco con tomate":120,"2 lonchas jamón serrano":60,"Lata pequeña atún/sardinas":120,"Puñadito frutos secos":150,"1 huevo duro":80,"Zanahoria/pepino + hummus":100,"Yogur + canela":90},
-  "Cena · verdura":{"Crema de calabacín":90,"Crema de verduras":90,"Sopa de verduras":60,"Caldo":30,"Verduras a la plancha":70,"Espárragos":30,"Ensalada templada":60,"Pisto (sin pan)":100},
-  "Cena · proteína":{"Tortilla francesa 2 huevos":180,"Revuelto con champiñones/espinacas":190,"Pescado blanco plancha":140,"Salmón":250,"Pavo o pollo plancha":160,"Gambas o sepia":110,"Tortilla de calabacín":170,"Queso fresco + jamón dulce":180}
+  "Desayuno":{"Tostada integral + aceite + pavo":220,"Tostada integral + aceite + atún":230,"Tostada integral + queso fresco + tomate":200,"Tostada + jamón dulce + queso fresco":210,"Tostada + ⅓ aguacate + huevo duro":260,"Yogur natural + nueces":180,"Yogur natural + 1 cda. chía":140,"Yogur natural + almendras + canela":190,"Tortilla 2 huevos + tomate":200,"Queso fresco + fruta troceada + nueces":220,"Yogur natural sin lactosa":80,"Tostada integral con aceite de oliva":150},
+  "Media mañana":{"Manzana":80,"Pera":85,"Naranja entera":70,"1-2 kiwis":90,"2 mandarinas":70,"Tazón pequeño de fresas":50,"10-12 almendras":90,"6-8 nueces":120,"Yogur natural":90,"2 lonchas de pavo":50,"Piña natural":60},
+  "Comida · entrante":{"Ensalada verde":40,"Ensalada de tomate":50,"Gazpacho (sin pan)":70,"Caldo de verduras":30,"Crema de calabacín":90,"Crema de calabaza":100,"Sopa de verduras":60,"Ensalada pepino y tomate":45,"Escarola y endibias con vinagreta":60,"Espárragos con jamón":90,"Puerros a la plancha":50,"Pimientos verdes a la plancha":45},
+  "Comida · proteína":{"Merluza plancha/horno":140,"Dorada o lubina al horno":160,"Salmón al horno":250,"Bacalao":120,"Pechuga de pollo":165,"Pechuga de pavo":150,"Ternera magra plancha":190,"Lomo de cerdo magro":180,"Gambas o sepia plancha":110,"2 huevos (tortilla/revuelto)":180,"Lentejas o garbanzos (½ plato)":200,"Conservas de pescado en aceite/escabeche":180,"Marisco variado (gambas, mejillones)":130},
+  "Comida · guarnición":{"Verduras salteadas":80,"Brócoli al vapor":40,"Judías verdes":45,"Pimientos asados":50,"Zanahoria y calabacín":50,"Berenjena plancha":60,"Espárragos":30,"Champiñones":35,"Coliflor al vapor":35,"Menestra":90,"Ensalada":40,"Coles de Bruselas":50,"Alcachofas al vapor":60},
+  "Merienda":{"Yogur natural":90,"Queso fresco con tomate":120,"2 lonchas jamón serrano":60,"Lata pequeña atún/sardinas":120,"Puñadito frutos secos":150,"1 huevo duro":80,"Zanahoria/pepino + hummus":100,"Yogur + canela":90,"Lonchas de lomo embutido":90,"York extra":70},
+  "Cena · verdura":{"Crema de calabacín":90,"Crema de verduras":90,"Sopa de verduras":60,"Caldo":30,"Verduras a la plancha":70,"Espárragos":30,"Ensalada templada":60,"Pisto (sin pan)":100,"Escarola con vinagreta":55,"Champiñones al ajillo":70},
+  "Cena · proteína":{"Tortilla francesa 2 huevos":180,"Revuelto con champiñones/espinacas":190,"Pescado blanco plancha":140,"Salmón":250,"Pavo o pollo plancha":160,"Gambas o sepia":110,"Tortilla de calabacín":170,"Queso fresco + jamón dulce":180,"Conservas de pescado en escabeche":170,"Marisco variado":120}
 };
 function kcalFor(slot,name){return (KCAL[slot]&&KCAL[slot][name])||0}
 function dayTotalKcal(menu){
@@ -764,9 +770,9 @@ function dayTotalKcal(menu){
 }
 
 const SHOP = {
-  "Proteínas":["Pechugas de pollo (3-4)","Pavo fresco o fiambre +80%","Pescado blanco (3-4 raciones)","Salmón (1-2)","Atún al natural (4-6 latas)","Sardinas/caballa (2-3 latas)","Huevos (docena)","Ternera magra o lomo (1-2)","Gambas o sepia","Jamón dulce/serrano","Queso fresco","Yogur natural entero sin azúcar (6-8)","Legumbre cocida (1-2 botes)"],
-  "Verduras":["Ensalada (2 bolsas)","Tomates (6-8)","Pepino (2)","Calabacín (3-4)","Brócoli (1-2)","Judías verdes (500g)","Pimientos (3-4)","Zanahorias","Champiñones","Espinacas","Espárragos","Cebolla y ajo","Verduras para caldo"],
-  "Frutas":["Manzanas (3-4)","Peras (2-3)","Naranjas/mandarinas (4-5)","Kiwis (3-4)","Fresas (opcional)"],
+  "Proteínas":["Pechugas de pollo (3-4)","Pavo fresco o fiambre +80%","Pescado blanco (3-4 raciones)","Salmón (1-2)","Atún al natural (4-6 latas)","Sardinas/caballa (2-3 latas)","Huevos (docena)","Ternera magra o lomo (1-2)","Gambas o sepia","Marisco variado (gambas, mejillones)","Jamón dulce/serrano","Lacón o york extra","Queso fresco","Yogur natural entero sin azúcar (6-8)","Yogur sin lactosa (opc.)","Legumbre cocida (1-2 botes)","Conservas de pescado en escabeche"],
+  "Verduras":["Ensalada (2 bolsas)","Tomates (6-8)","Pepino (2)","Calabacín (3-4)","Brócoli (1-2)","Judías verdes (500g)","Pimientos (3-4)","Zanahorias","Champiñones","Espinacas","Espárragos","Cebolla y ajo","Verduras para caldo","Escarola y endibias","Puerros","Coles de Bruselas","Alcachofas"],
+  "Frutas":["Manzanas (3-4)","Peras (2-3)","Naranjas/mandarinas (4-5)","Kiwis (3-4)","Fresas (opcional)","Piña natural (opcional)"],
   "Despensa":["Pan 100% integral","Aceite de oliva virgen extra","Arroz integral","Nueces y almendras al natural","Semillas de chía (opc.)","Hummus (opc.)","Aguacates (2, opc.)","Especias (canela, pimentón…)","Infusiones"]
 };
 
@@ -1350,7 +1356,7 @@ function renderCharts(){
 }
 
 /* ═══════════════ IDEAS / DESEOS ═══════════════ */
-const APP_VERSION="4.2";
+const APP_VERSION="4.3";
 function saveWish(){
   const el=document.getElementById("wishVal");
   const txt=(el.value||"").trim();
