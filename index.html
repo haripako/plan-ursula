@@ -1,7 +1,20 @@
 <!DOCTYPE html>
 <!-- ═══════════════════════════════════════════════════════
-  EL PLAN DE ÚRSULA — v5.4 (5 julio 2026)
+  EL PLAN DE ÚRSULA — v5.8 (5 julio 2026)
   Historial:
+   v5.8  Cabecera y nav vuelven a fondo claro (mejor contraste para su vista;
+         el negro plano de v5.6 quedaba pobre de visibilidad) · número de
+         versión visible directamente en la cabecera (antes solo en Yo)
+   v5.7  Seguridad de datos: S.schemaVersion + migrate() para futuros cambios
+         de estructura · copia de seguridad automática (JSON) al detectar
+         que se ha actualizado la app
+   v5.6  Rediseño visual: paleta monocromática (teal→ink) con el coral como
+         único acento reservado para avisos/dolor. Cabecera y nav en negro
+         plano con la racha como cifra grande. Tarjetas y chips más planos,
+         sin sombras decorativas. Cero colores sueltos fuera del sistema
+   v5.5  FIX: al regenerar el menú semanal o pulsar "Sorpréndeme", la
+         cantidad ya no se queda pegada al alimento anterior (podía dar
+         kcal hasta 3x por encima de lo real). Tests de regresión añadidos
    v5.4  Sección Shorts descartada (YouTube requiere API key para embeber
          su feed; se retomará cuando se decida el enfoque adecuado)
    v5.3  Cantidades reales en el menú: stepper [−][150g][+] por franja,
@@ -61,13 +74,14 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Plan Úrsula">
-<title>El Plan de Úrsula 💙 v5.4</title>
+<title>El Plan de Úrsula 💙 v5.8</title>
 <style>
 :root{
-  --teal:#0E7C7B; --teal-dark:#0A5958; --aqua:#DDF1F0; --aqua-mid:#BCE3E1;
-  --ink:#1C3335; --muted:#5E7A7C; --paper:#F4FAF9; --card:#FFFFFF;
-  --coral:#F0685A; --gold:#E8A93D; --ok:#2E9E6B; --line:#DCE9E8;
-  --r:16px; --shadow:0 2px 10px rgba(14,124,123,.10);
+  --ink:#0F2624; --ink-soft:#274B48; --teal:#0E7C7B; --teal-dark:#0A5958;
+  --aqua:#E3F1F0; --aqua-mid:#C7E4E1;
+  --muted:#5C7876; --paper:#EEF5F4; --card:#FFFFFF;
+  --coral:#E8604F; --coral-soft:#FBE2DE; --line:#DCE7E5;
+  --r:14px; --shadow:0 1px 3px rgba(15,38,36,.08);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
@@ -75,17 +89,18 @@ body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background
 h1,h2,h3{line-height:1.2}
 button{font-family:inherit;border:none;cursor:pointer;background:none}
 
-header{background:linear-gradient(135deg,var(--teal),var(--teal-dark));color:#fff;padding:18px 18px 16px;border-radius:0 0 22px 22px}
-header .day{font-size:13px;opacity:.85;text-transform:uppercase;letter-spacing:.08em}
-header h1{font-size:22px;font-weight:800;margin-top:2px}
-header .quote{font-size:13.5px;opacity:.92;margin-top:6px;font-style:italic}
-.streak-bar{display:flex;gap:10px;margin-top:12px}
-.chip{background:rgba(255,255,255,.16);border-radius:12px;padding:8px 12px;flex:1;text-align:center}
-.chip b{display:block;font-size:20px}
-.chip span{font-size:11px;opacity:.85}
+header{background:var(--card);color:var(--ink);padding:20px 18px 18px;border-radius:0 0 18px 18px;border-bottom:1px solid var(--line)}
+header .day{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;font-weight:800}
+header h1{font-size:22px;font-weight:800;margin-top:3px;letter-spacing:-.01em;color:var(--ink)}
+header .quote{font-size:13.5px;color:var(--muted);margin-top:6px}
+.streak-bar{display:flex;gap:8px;margin-top:16px}
+.chip{background:var(--aqua);border:1px solid var(--aqua-mid);border-radius:12px;padding:10px 8px;flex:1;text-align:center}
+.chip b{display:block;font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--teal-dark)}
+.chip span{font-size:10px;color:var(--teal-dark);opacity:.75;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
 
-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;z-index:50;padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;padding:9px 2px 8px;font-size:10.5px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;font-weight:600}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;z-index:50;padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+nav button{flex:1;padding:7px 2px;font-size:10.5px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;font-weight:700;border-radius:12px}
+nav button.active{color:var(--teal-dark);background:var(--aqua)}
 nav button .ico{font-size:21px;line-height:1}
 nav button.active{color:var(--teal)}
 nav button.active .ico{transform:scale(1.12)}
@@ -94,15 +109,15 @@ main{padding:16px 14px 20px;max-width:560px;margin:0 auto}
 .view{display:none}.view.show{display:block;animation:fade .18s ease}
 @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
-.card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
-.card h2{font-size:17px;margin-bottom:8px}
+.card{background:var(--card);border-radius:var(--r);border:1px solid var(--line);box-shadow:var(--shadow);padding:16px;margin-bottom:12px}
+.card h2{font-size:15px;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
 .small{font-size:13px;color:var(--muted)}
 .tag{display:inline-block;background:var(--aqua);color:var(--teal-dark);font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px}
 
 .step{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
 .step:last-child{border-bottom:none}
 .step .chk{width:30px;height:30px;min-width:30px;border-radius:9px;border:2.5px solid var(--aqua-mid);display:flex;align-items:center;justify-content:center;font-size:17px;color:#fff;background:#fff;transition:.15s;margin-top:2px}
-.step.done .chk{background:var(--ok);border-color:var(--ok)}
+.step.done .chk{background:var(--teal);border-color:var(--teal)}
 .step .txt b{display:block;font-size:15.5px}
 .step .txt span{font-size:13px;color:var(--muted)}
 .step.done .txt{opacity:.45;text-decoration:line-through}
@@ -113,34 +128,34 @@ main{padding:16px 14px 20px;max-width:560px;margin:0 auto}
 .step .figbox svg{width:100%;height:auto;display:block}
 .step.done .figbox{opacity:.35}
 
-.big-btn{width:100%;padding:16px;border-radius:14px;font-size:17px;font-weight:800;color:#fff;background:var(--teal);box-shadow:var(--shadow);margin-top:6px;transition:.15s}
+.big-btn{width:100%;padding:15px;border-radius:13px;font-size:16px;font-weight:800;color:#fff;background:var(--teal);margin-top:6px;transition:.15s}
 .big-btn:active{transform:scale(.98)}
-.big-btn.done{background:var(--ok)}
-.big-btn.ghost{background:#fff;color:var(--teal);border:2px solid var(--aqua-mid)}
+.big-btn.done{background:var(--ink-soft)}
+.big-btn.ghost{background:#fff;color:var(--teal-dark);border:1.5px solid var(--line)}
 .big-btn.coral{background:var(--coral)}
 .big-btn.gray{background:var(--muted)}
 
-.timer{position:fixed;inset:0;background:rgba(12,45,46,.92);display:none;align-items:center;justify-content:center;flex-direction:column;z-index:100;color:#fff}
+.timer{position:fixed;inset:0;background:rgba(15,38,36,.92);display:none;align-items:center;justify-content:center;flex-direction:column;z-index:100;color:#fff}
 .timer.show{display:flex}
 .timer .t{font-size:88px;font-weight:800;font-variant-numeric:tabular-nums}
 .timer p{opacity:.8;margin-bottom:8px;font-size:15px}
 .timer button{margin-top:22px;color:#fff;border:2px solid rgba(255,255,255,.4);padding:10px 26px;border-radius:99px;font-size:15px;font-weight:700}
 
 .week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px}
-.wday{background:#fff;border-radius:12px;padding:8px 2px;text-align:center;border:2px solid transparent}
-.wday.today{border-color:var(--teal)}
+.wday{background:#fff;border-radius:12px;padding:8px 2px;text-align:center;border:1.5px solid var(--line)}
+.wday.today{border-color:var(--teal);border-width:2px}
 .wday .l{font-size:10.5px;color:var(--muted);font-weight:700}
 .wday .x{font-size:22px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--coral);font-weight:900}
 .wday .a{font-size:14px}
 
 .chain{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:10px}
-.chain div{aspect-ratio:1;border-radius:8px;background:var(--aqua);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:var(--coral)}
-.chain div.off{background:#EDF3F2;color:transparent}
+.chain div{aspect-ratio:1;border-radius:8px;background:var(--aqua);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:var(--teal-dark)}
+.chain div.off{background:var(--paper);color:transparent}
 .chain div.future{background:#fff;border:1.5px dashed var(--line);color:transparent}
 
 .slot{margin-bottom:12px}
-.slot label{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--teal-dark)}
-.slot select{width:100%;margin-top:5px;padding:13px 12px;font-size:15px;border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--ink);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%235E7A7C' stroke-width='2' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
+.slot label{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.slot select{width:100%;margin-top:5px;padding:13px 12px;font-size:15px;border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--ink);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%235C7876' stroke-width='2' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
 
 .shop-cat{font-size:13px;font-weight:800;color:var(--teal-dark);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 4px}
 .shop-item{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--line);font-size:15px}
@@ -151,7 +166,7 @@ main{padding:16px 14px 20px;max-width:560px;margin:0 auto}
 
 .badges{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
 .badge{background:#fff;border-radius:14px;padding:13px 10px;text-align:center;border:1.5px solid var(--line)}
-.badge.won{border-color:var(--gold);background:linear-gradient(180deg,#FFF9EC,#fff)}
+.badge.won{border-color:var(--teal);background:linear-gradient(180deg,var(--aqua),#fff)}
 .badge .e{font-size:28px;filter:grayscale(1);opacity:.35}
 .badge.won .e{filter:none;opacity:1}
 .badge b{display:block;font-size:13px;margin-top:4px}
@@ -172,7 +187,7 @@ main{padding:16px 14px 20px;max-width:560px;margin:0 auto}
 .pick{background:#fff;border:2px solid var(--line);border-radius:13px;padding:9px 2px;text-align:center;transition:.12s}
 .pick .e{font-size:22px;display:block}
 .pick .n{font-size:11px;font-weight:700;color:var(--muted)}
-.pick .s{font-size:9.5px;color:var(--gold);font-weight:800;display:block;min-height:12px}
+.pick .s{font-size:9.5px;color:var(--teal-dark);font-weight:800;display:block;min-height:12px}
 .pick.on{border-color:var(--teal);background:var(--aqua)}
 .pick.on .n{color:var(--teal-dark)}
 
@@ -210,10 +225,10 @@ html.big-text nav button{font-size:12px}
 html.big-text .shop-item{font-size:17px}
 html.big-text .lvl-row .n{font-size:16px}
 
-.reminder{background:linear-gradient(135deg,#FFF6E4,#FFFDF7);border:1.5px solid var(--gold);border-radius:14px;padding:12px 14px;margin-bottom:14px;font-size:13.5px;color:var(--teal-dark);display:flex;align-items:center;gap:10px}
+.reminder{background:var(--aqua);border:1.5px solid var(--teal);border-radius:14px;padding:12px 14px;margin-bottom:14px;font-size:13.5px;color:var(--teal-dark);display:flex;align-items:center;gap:10px}
 .reminder button{margin-left:auto;background:none;color:var(--muted);font-weight:800;font-size:16px;padding:2px 6px;flex-shrink:0}
 
-.videoModal{position:fixed;inset:0;background:rgba(12,45,46,.94);display:none;align-items:center;justify-content:center;z-index:110;padding:18px}
+.videoModal{position:fixed;inset:0;background:rgba(15,38,36,.94);display:none;align-items:center;justify-content:center;z-index:110;padding:18px}
 .videoModal.show{display:flex}
 .videoModal-inner{width:100%;max-width:480px}
 .videoModal-close{display:block;margin:0 auto 12px;color:#fff;border:2px solid rgba(255,255,255,.4);padding:8px 18px;border-radius:99px;font-weight:700;font-size:14px}
@@ -230,7 +245,7 @@ html.big-text .lvl-row .n{font-size:16px}
 .checkin-row:last-child{border:none}
 .checkin-row .n{flex:1;font-size:14px;font-weight:600}
 .checkin-row .cbtn{padding:8px 12px;border-radius:10px;font-size:16px;background:var(--aqua)}
-.checkin-row .cbtn.pain{background:#FBE4E1}
+.checkin-row .cbtn.pain{background:var(--coral-soft)}
 .checkin-row .done-tag{font-size:12px;font-weight:800;color:var(--muted);white-space:nowrap}
 
 details{border-bottom:1px solid var(--line);padding:10px 0}
@@ -247,14 +262,14 @@ details p{margin-top:8px}
 
 .lvl-tag{display:inline-block;margin-top:3px;font-size:10.5px;font-weight:800;color:var(--teal-dark);background:var(--aqua);border-radius:99px;padding:2px 8px}
 .chip-picker{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
-.chip-opt{background:#fff;border:1.5px solid var(--line);border-radius:99px;padding:7px 13px;font-size:13px;font-weight:700;color:var(--muted)}
-.chip-opt.on{border-color:var(--teal);background:var(--aqua);color:var(--teal-dark)}
+.chip-opt{background:#fff;border:1.5px solid var(--line);border-radius:99px;padding:7px 13px;font-size:12.5px;font-weight:700;color:var(--muted)}
+.chip-opt.on{border-color:var(--teal);background:var(--teal);color:#fff}
 .meal-slot{padding:10px 0;border-bottom:1px solid var(--line)}
 .meal-slot:last-child{border:none}
 .meal-slot .top{display:flex;align-items:center;gap:8px}
 .meal-slot .lbl{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--teal-dark);flex:1}
 .meal-slot .eatbtn{background:var(--aqua);color:var(--teal-dark);border-radius:99px;padding:5px 12px;font-size:12px;font-weight:800;white-space:nowrap}
-.meal-slot .eatbtn.on{background:var(--ok);color:#fff}
+.meal-slot .eatbtn.on{background:var(--teal);color:#fff}
 .meal-slot select{width:100%;margin-top:6px;padding:11px 12px;font-size:14.5px;border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--ink)}
 
 .qty-stepper{display:flex;align-items:center;gap:5px;margin-top:5px}
@@ -270,7 +285,7 @@ details p{margin-top:8px}
 .hunger-lvl.on{border-color:var(--coral);background:#FBE4E1}
 .hunger-lvl.on .n{color:var(--coral)}
 
-.feedbackModal{position:fixed;inset:0;background:rgba(12,45,46,.55);display:none;align-items:center;justify-content:center;z-index:120;padding:20px}
+.feedbackModal{position:fixed;inset:0;background:rgba(15,38,36,.55);display:none;align-items:center;justify-content:center;z-index:120;padding:20px}
 .feedbackModal.show{display:flex}
 .feedbackModal-inner{background:#fff;border-radius:16px;padding:20px;max-width:320px;width:100%;text-align:center;box-shadow:var(--shadow)}
 .feedbackModal-inner p{font-size:15.5px;font-weight:800;color:var(--ink);margin-bottom:14px}
@@ -284,7 +299,10 @@ details p{margin-top:8px}
 <body>
 
 <header>
-  <div class="day" id="hToday"></div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div class="day" id="hToday"></div>
+    <span id="hVer" style="font-size:10px;color:var(--muted);font-weight:700;background:var(--aqua);padding:2px 8px;border-radius:99px"></span>
+  </div>
   <h1 id="hTitle">¡Hola, Úrsula! 💙</h1>
   <div class="quote" id="hQuote"></div>
   <div class="streak-bar">
@@ -1038,6 +1056,39 @@ S.customFoods=S.customFoods||{};
 S.hungerLog=S.hungerLog||[];
 S.bodyComp=S.bodyComp||[];
 S.checkins=S.checkins||{}; S.checkinAnswered=S.checkinAnswered||{}; S.painStreak=S.painStreak||{};
+S.schemaVersion=S.schemaVersion||0;
+
+// MIGRACIONES: cada vez que la FORMA de un dato cambie de verdad (no solo que
+// se añada un campo nuevo — eso ya lo cubre S.x=S.x||default de arriba), se
+// añade aquí un paso "if(S.schemaVersion<N){...; S.schemaVersion=N}".
+// Así una actualización nunca deja datos antiguos en un formato que el código
+// nuevo no sepa leer. De momento no ha hecho falta ninguna, pero el mecanismo
+// ya existe para cuando toque.
+function migrate(){
+  const before=S.schemaVersion;
+  // if(S.schemaVersion<1){ ... S.schemaVersion=1 }
+  if(S.schemaVersion<1){ S.schemaVersion=1 }
+  if(S.schemaVersion!==before) save();
+}
+migrate();
+
+// COPIA DE SEGURIDAD AUTOMÁTICA AL ACTUALIZAR: si detecta que la versión de
+// la app cambió desde la última vez que se abrió, descarga sola un JSON de
+// respaldo con fecha, por si algo fuera mal. No sustituye nada, no pregunta:
+// solo dejas la copia guardada en Descargas por si hiciera falta.
+function autoBackupOnUpdate(){
+  try{
+    const last=localStorage.getItem(KEY+"_lastVersion");
+    if(last&&last!==APP_VERSION){
+      const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");a.href=url;
+      a.download="plan-ursula-antes-de-actualizar-a-v"+APP_VERSION+".json";a.click();
+      setTimeout(()=>URL.revokeObjectURL(url),3000);
+    }
+    localStorage.setItem(KEY+"_lastVersion",APP_VERSION);
+  }catch(e){}
+}
 // Migración desde V1 (por si existiera): separar claves "menu-" de days
 try{
   const old=JSON.parse(localStorage.getItem("miPlanV1"));
@@ -1206,6 +1257,7 @@ function renderHeader(){
   const st=calcStreaks();
   document.getElementById("cStreak").textContent=st.cur;
   document.getElementById("cPts").textContent=st.pts;
+  const verEl=document.getElementById("hVer"); if(verEl)verEl.textContent="v"+APP_VERSION;
   const now=new Date(); let cnt=0;
   const monday=new Date(now); monday.setDate(now.getDate()-((now.getDay()+6)%7));
   for(let i=0;i<7;i++){const d=new Date(monday);d.setDate(monday.getDate()+i);
@@ -1276,7 +1328,7 @@ function generateDayMenu(prefs){
   return day;
 }
 function generateWeekMenu(){
-  weekDateKeys().forEach(k=>{S.weekMenu[k]=generateDayMenu(S.weekPrefs)});
+  weekDateKeys().forEach(k=>{S.weekMenu[k]=generateDayMenu(S.weekPrefs); S.weekMenuQty[k]={}});
   save(); renderComida();
   toast("✨ ¡Menú de la semana listo, Úrsula!"); confetti();
 }
@@ -1347,6 +1399,7 @@ function delCustomFood(slot,i){
 function randomMenu(){
   const tk=todayKey();
   S.weekMenu[tk]=generateDayMenu(S.weekPrefs);
+  S.weekMenuQty[tk]={};
   save(); renderComida(); toast("🎲 ¡Menú de hoy renovado, Úrsula!");
 }
 function toggleMealDone(slot){
@@ -1831,7 +1884,7 @@ function renderCharts(){
 }
 
 /* ═══════════════ IDEAS / DESEOS ═══════════════ */
-const APP_VERSION="5.4";
+const APP_VERSION="5.8";
 function saveWish(){
   const el=document.getElementById("wishVal");
   const txt=(el.value||"").trim();
@@ -2134,6 +2187,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)renderAll(
 function renderAll(){renderToday();renderWeek();renderComida();renderFeels();renderBody();renderLevelSummary();renderWishes();renderMealPhotos();renderLearnChips();renderHunger();applyTextSize();checkBadges(true);renderReminder()}
 document.getElementById("verLine").textContent="Versión de la app: "+APP_VERSION+" · 5 julio 2026";
 document.getElementById("v-hoy").classList.add("show");
+autoBackupOnUpdate();
 renderAll();
 </script>
 </body>
