@@ -1,7 +1,11 @@
 <!DOCTYPE html>
 <!-- ═══════════════════════════════════════════════════════
-  EL PLAN DE ÚRSULA — v5.8 (5 julio 2026)
+  EL PLAN DE ÚRSULA — v5.9 (5 julio 2026)
   Historial:
+   v5.9  FIX importante: marcar un ejercicio como hecho ya no desaparece al
+         cambiar de nivel OTRO ejercicio de la misma sesión (antes se
+         guardaba por posición en la lista; ahora se guarda por el nombre
+         del paso, así cada ejercicio va a su aire). 4 tests de regresión
    v5.8  Cabecera y nav vuelven a fondo claro (mejor contraste para su vista;
          el negro plano de v5.6 quedaba pobre de visibilidad) · número de
          versión visible directamente en la cabecera (antes solo en Yo)
@@ -74,7 +78,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Plan Úrsula">
-<title>El Plan de Úrsula 💙 v5.8</title>
+<title>El Plan de Úrsula 💙 v5.9</title>
 <style>
 :root{
   --ink:#0F2624; --ink-soft:#274B48; --teal:#0E7C7B; --teal-dark:#0A5958;
@@ -1171,20 +1175,23 @@ function renderToday(){
   document.getElementById("sesTitle").textContent= type===planType&&type==="rest" ? ses.title : ses.title;
   document.getElementById("sesSub").textContent=ses.sub;
 
-  // Checks por día Y por actividad: si cambia de piscina a gimnasio, cada una guarda lo suyo
+  // Checks por día Y por actividad: si cambia de piscina a gimnasio, cada una guarda lo suyo.
+  // Se guarda por el NOMBRE del paso, no por su posición: así, si un ejercicio cambia de
+  // nivel (y por tanto de pasos), los demás ejercicios de la misma sesión no se ven afectados.
   const tk=todayKey(), sk=tk+"|"+type;
-  const stepState=S.steps[sk]||[];
+  const stepState=(S.steps[sk]&&!Array.isArray(S.steps[sk]))?S.steps[sk]:{};
   const wrap=document.getElementById("sesSteps"); wrap.innerHTML="";
   getSteps(type).forEach((st,i)=>{
     const div=document.createElement("div");
-    div.className="step"+(stepState[i]?" done":"");
+    const skey=st[0];
+    div.className="step"+(stepState[skey]?" done":"");
     const vid=st[3]
       ? (st[4]
           ? `<a class="vid" href="#" data-yt="${st[4]}">▶ vídeo</a>`
           : `<a class="vid" href="https://www.youtube.com/results?search_query=${encodeURIComponent(st[3])}" target="_blank" rel="noopener">▶ vídeo</a>`)
       : "";
     const lvlTag=st[5]?`<span class="lvl-tag" data-id="${st[5]}">Nivel ${(S.levels[st[5]]||"A")}</span>`:"";
-    div.innerHTML=`<div class="chk">${stepState[i]?"✓":""}</div><div class="txt"><b>${st[0]}</b><span>${st[1]}</span>${lvlTag?`<br>${lvlTag}`:""}</div>${st[2]?`<div class="figcol"><div class="figbox">${fig(st[2])}</div>${vid}</div>`:""}`;
+    div.innerHTML=`<div class="chk">${stepState[skey]?"✓":""}</div><div class="txt"><b>${st[0]}</b><span>${st[1]}</span>${lvlTag?`<br>${lvlTag}`:""}</div>${st[2]?`<div class="figcol"><div class="figbox">${fig(st[2])}</div>${vid}</div>`:""}`;
     const vlink=div.querySelector(".vid");
     if(vlink)vlink.addEventListener("click",e=>{
       e.stopPropagation();
@@ -1193,8 +1200,8 @@ function renderToday(){
     const lvlEl=div.querySelector(".lvl-tag");
     if(lvlEl)lvlEl.addEventListener("click",e=>{e.stopPropagation();cycleLevel(st[5])});
     div.onclick=()=>{
-      const turningOn=!stepState[i];
-      stepState[i]=turningOn;
+      const turningOn=!stepState[skey];
+      stepState[skey]=turningOn;
       S.steps[sk]=stepState; save();
       const exId=st[5];
       if(turningOn&&exId&&!S.checkinAnswered[todayKey()+"|"+exId]){
@@ -1662,19 +1669,20 @@ function renderLevelSummary(){
 }
 // Cambia de nivel un ejercicio concreto desde donde se usa de verdad: la sesión de Hoy.
 // A → B → C → A. Siempre con opción de deshacer, igual que antes.
+function typeOfExercise(id){
+  for(const type of Object.keys(EXOS)){
+    if((EXOS[type]||[]).some(item=>item.id===id))return type;
+  }
+  return null;
+}
 function cycleLevel(id){
   if(!id)return;
   const cur=S.levels[id]||"A";
   const next=cur==="A"?"B":cur==="B"?"C":"A";
-  const tk=todayKey();
-  const prevSteps={};
-  Object.keys(S.steps).forEach(k=>{if(k===tk||k.startsWith(tk+"|"))prevSteps[k]=S.steps[k]});
   if(next==="A")delete S.levels[id]; else S.levels[id]=next;
-  Object.keys(S.steps).forEach(k=>{if(k===tk||k.startsWith(tk+"|"))delete S.steps[k]});
   save(); renderToday(); renderLevelSummary();
   const undoLevel=()=>{
     if(cur==="A")delete S.levels[id]; else S.levels[id]=cur;
-    Object.assign(S.steps,prevSteps);
     save(); renderToday(); renderLevelSummary();
   };
   const name=EXO_NAME[id]||"este ejercicio";
@@ -1723,7 +1731,6 @@ function answerCheckin(id,name,felt){
     S.painStreak[id]=0;
     if(next!==cur){
       S.levels[id]=next;
-      Object.keys(S.steps).forEach(k=>{if(k===tk||k.startsWith(tk+"|"))delete S.steps[k]});
       save(); renderLevelSummary(); renderToday();
       toastAction(`Nivel de "${name}" bajado, para cuidarte 💙`,"Deshacer",()=>{
         S.levels[id]=cur; save(); renderLevelSummary(); renderToday();
@@ -1884,7 +1891,7 @@ function renderCharts(){
 }
 
 /* ═══════════════ IDEAS / DESEOS ═══════════════ */
-const APP_VERSION="5.8";
+const APP_VERSION="5.9";
 function saveWish(){
   const el=document.getElementById("wishVal");
   const txt=(el.value||"").trim();
